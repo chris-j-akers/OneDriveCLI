@@ -3,23 +3,20 @@ import os
 import sqlite3
 import logging
 
-# App/Client ID: 9806a116-6f7d-4154-a06e-0c887dd51eed
-# Tenant ID: 42a7cc42-d023-4e93-898d-3777ba423ebe
-
-logger = logging.getLogger(f'{__name__}')
-logging.basicConfig()
-
-class MSALAccountToken:
+logger = logging.getLogger(__name__)
+class MSALPersonalAccountToken:
     
-    def __init__(self, app_name, client_id, authority, scopes=['User.Read'], refresh_token=None) -> None:
+    def __init__(self, app_name, client_id, authority, scopes=['User.Read'], refresh_token='') -> None:
         self._logger = logger.getChild(__class__.__name__)
         self._app_name = app_name
         
         self._scopes = scopes
-        self._current_token = None
+        self._current_token = ''
         self._refresh_token = refresh_token
+        self._account = ''
 
         self._pca = PublicClientApplication(client_id=client_id, authority=authority, client_credential=None)
+
         self._initialise_token_db()
         self._set_refresh_token_from_db()
 
@@ -46,7 +43,6 @@ class MSALAccountToken:
     def _create_token_db(self):
         cursor = self._connection.cursor()
         cursor.execute('CREATE TABLE token (app_name TEXT, refresh_token TEXT, PRIMARY KEY (app_name))')
-        cursor.execute('INSERT INTO token VALUES (? , ?)', (self._app_name, None))
         self._logger.debug('Created token table')
 
     def _set_refresh_token_from_db(self):
@@ -54,48 +50,58 @@ class MSALAccountToken:
         rows = cursor.execute('SELECT refresh_token FROM token where app_name = ?', (self._app_name,)).fetchall()
         if len(rows) == 0:
             self._logger.debug('No refresh_tokens found in token_db, setting to None')
-            self._refresh_token = None
+            self._refresh_token = ''
         else:
             self._refresh_token = rows[0][0]
             self._logger.debug(f'Refresh token pulled from db is: {self._refresh_token}')
 
-    def _upsert_refresh_token_in_db(self, refresh_token):
-        self._logger.debug(f'Updating refresh token in token_db to: {refresh_token}')
+    def _upsert_refresh_token_in_db(self):
+        self._logger.debug('Updating refresh token in token_db')
         cursor = self._connection.cursor()
-        cursor.execute('INSERT INTO token (app_name, refresh_token) VALUES (?, ?) ON CONFLICT (app_name) DO UPDATE SET refresh_token = ?;', (self._app_name, refresh_token, refresh_token))
+        cursor.execute('INSERT INTO token (app_name, refresh_token) VALUES (?, ?) ON CONFLICT (app_name) DO UPDATE SET refresh_token = ?;', (self._app_name, self._refresh_token, self._refresh_token))
 
-logger.setLevel(logging.DEBUG)
-token = MSALAccountToken('OneDriveSync',
-                         client_id='9806a116-6f7d-4154-a06e-0c887dd51eed', 
-                         authority='https://login.microsoftonline.com/consumers')
+    def _update_token_by_cache(self):
+        if self._pca.get_accounts() == []:
+            return False
+        account = self._pca.get_accounts()[0]
+        self._logger.debug(f'Found cached account for {account['username']}, using it to acquire token silently')    
+        token_data = self._pca.acquire_token_silent(account=self._pca.get_accounts()[0], scopes=self._scopes)
+        if not 'error' in token_data:
+            self._current_token = token_data['access_token']
+            self._upsert_refresh_token_in_db()
+            return True
+        return False
 
-#token._upsert_refresh_token_in_db('BLAH')
+    def _update_token_by_refresh(self):
+        if self._refresh_token == '':
+            return False
+        self._logger.debug('Refresh token available, using it to acquire token')
+        token_data = self._pca.acquire_token_by_refresh_token(refresh_token=self._refresh_token, scopes=self._scopes)
+        if not 'error' in token_data:
+            self._current_token = token_data['access_token']
+            self._refresh_token = token_data['refresh_token']
+            self._upsert_refresh_token_in_db()
+            return True
+        return False
+
+    def _update_token_interactive(self):
+        token_data = self._pca.acquire_token_interactive(scopes=self._scopes)
+        if not 'error' in token_data:
+            self._current_token = token_data['access_token']
+            self._refresh_token = token_data['refresh_token']
+            self._upsert_refresh_token_in_db()
+            return token_data['access_token']
+
+    def get_token(self):
+        if self._update_token_by_cache():
+            return self._current_token
+
+        if self._update_token_by_refresh():
+            return self._current_token
+
+        self._update_token_interactive()
+        return self._current_token
+
+  
 
 
-
-
-
-#     def get_access_token_for_personal_account(self):
-#         pca =  PublicClientApplication(client_id=self._client_id, 
-#                                         authority=self._authority
-#                                         scopes=self.scopes,
-#                                         client_credential=None)
-        
-#         token_data = None
-#         if pca.get_accounts() == []:
-#             token_data = pca.acquire_token_interactive(scopes=scopes)
-#         else:
-#             token_data = pca.acquire_token_silent(scopes=scopes, account=pca.get_accounts()[0])
-
-#         self.current_token = token_data['access_token']
-
-
-
-# token_data = get_access_token_for_personal_account(client_id='9806a116-6f7d-4154-a06e-0c887dd51eed'
-
-# print(token_data)
-
-
-# print(result["access_token"])
-
-# webbrowser.open('https://www.google.com')
