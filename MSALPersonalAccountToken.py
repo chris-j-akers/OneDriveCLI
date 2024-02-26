@@ -4,6 +4,7 @@ import sqlite3
 import logging
 
 logger = logging.getLogger(__name__)
+
 class MSALPersonalAccountToken:
     
     def __init__(self, app_name, client_id, authority, scopes=['User.Read'], refresh_token='') -> None:
