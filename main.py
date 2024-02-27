@@ -9,9 +9,9 @@ import shelve
 
 logging.basicConfig(level=logging.DEBUG)
 token = MSALTokenHandler('OneDriveSync',
-                                client_id='9806a116-6f7d-4154-a06e-0c887dd51eed', 
-                                authority='https://login.microsoftonline.com/consumers',
-                                db_filepath='./accounts.db')
+                            client_id='9806a116-6f7d-4154-a06e-0c887dd51eed', 
+                            authority='https://login.microsoftonline.com/consumers',
+                            db_filepath='./accounts.db')
 
 
 t = token.get_token()
