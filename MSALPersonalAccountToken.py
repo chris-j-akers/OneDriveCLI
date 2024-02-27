@@ -54,7 +54,7 @@ class MSALPersonalAccountToken:
             self._refresh_token = ''
         else:
             self._refresh_token = rows[0][0]
-            self._logger.debug(f'Refresh token pulled from db is: {self._refresh_token}')
+            self._logger.debug(f'Refresh token found in db')
 
     def _upsert_refresh_token_in_db(self):
         self._logger.debug('Updating refresh token in token_db')
@@ -94,12 +94,16 @@ class MSALPersonalAccountToken:
             return token_data['access_token']
 
     def get_token(self):
+        self._logger.debug('get_token() called, running waterfall')
         if self._update_token_by_cache():
+            self._logger.debug('returning token from cache')
             return self._current_token
 
         if self._update_token_by_refresh():
+            self._logger.debug('returning token from refresh token')
             return self._current_token
 
+        self._logger.debug('having to request token interactively')
         self._update_token_interactive()
         return self._current_token
 
