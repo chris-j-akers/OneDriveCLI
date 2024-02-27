@@ -5,32 +5,33 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class MSALPersonalAccountToken:
+class MSALATPersistenceAdapter:
     
-    def __init__(self, app_name, client_id, authority, scopes=['User.Read'], refresh_token='') -> None:
+    def __init__(self, app_name, client_id, authority, scopes=['User.Read'], db_path='') -> None:
         self._logger = logger.getChild(__class__.__name__)
         self._app_name = app_name
         
         self._scopes = scopes
         self._current_token = ''
-        self._refresh_token = refresh_token
+        self._refresh_token = ''
         self._account = ''
 
         self._pca = PublicClientApplication(client_id=client_id, authority=authority, client_credential=None)
 
-        self._initialise_token_db()
+        self._initialise_token_db(db_path=db_path)
         self._set_refresh_token_from_db()
 
-    def _get_db_path(self):
+    def _get_default_db_path(self):
         path = os.path.join(os.path.expanduser('~'), '.config', self._app_name)
         if not os.path.exists(path):
             self._logger.debug(f'token_db path not found, creating: {path}')
             os.mkdir(path)
         return os.path.join(path, self._app_name + '.db')
 
-    def _initialise_token_db(self):
+    def _initialise_token_db(self, db_path):
         self._logger.debug('Initialising token_db')
-        db_path = self._get_db_path()
+        if db_path == '':
+            db_path = self._get_default_db_path()
         self._connection = sqlite3.connect(db_path)
         self._connection.autocommit = True
         cursor = self._connection.cursor()
@@ -50,7 +51,7 @@ class MSALPersonalAccountToken:
         cursor = self._connection.cursor()
         rows = cursor.execute('SELECT refresh_token FROM token where app_name = ?', (self._app_name,)).fetchall()
         if len(rows) == 0:
-            self._logger.debug('No refresh_tokens found in token_db, setting to None')
+            self._logger.debug('No refresh_tokens found in token_db, setting empty')
             self._refresh_token = ''
         else:
             self._refresh_token = rows[0][0]
@@ -65,7 +66,7 @@ class MSALPersonalAccountToken:
         if self._pca.get_accounts() == []:
             return False
         account = self._pca.get_accounts()[0]
-        self._logger.debug(f'Found cached account for {account['username']}, using it to acquire token silently')    
+        self._logger.debug(f'Found cached account for {account['username']}, acquiring silently')    
         token_data = self._pca.acquire_token_silent(account=self._pca.get_accounts()[0], scopes=self._scopes)
         if not 'error' in token_data:
             self._current_token = token_data['access_token']
@@ -76,7 +77,7 @@ class MSALPersonalAccountToken:
     def _update_token_by_refresh(self):
         if self._refresh_token == '':
             return False
-        self._logger.debug('Refresh token available, using it to acquire token')
+        self._logger.debug('Using refresh token')
         token_data = self._pca.acquire_token_by_refresh_token(refresh_token=self._refresh_token, scopes=self._scopes)
         if not 'error' in token_data:
             self._current_token = token_data['access_token']
@@ -94,6 +95,19 @@ class MSALPersonalAccountToken:
             return token_data['access_token']
 
     def get_token(self):
+        """
+        Retrieves a new token using the PublicClientApplication class from MSAL.
+
+        Attempts are made in the following order:
+
+        1. Silently, using the MSAL built-in token cache
+        2. Using a refresh token loaded from the Sqlite DB
+        3. Interactively - Assumes a default browser is set
+
+        Once a token is retrieved, its associated refresh token is persisted to
+        the Sqlite DB for future use. Subsequent attempts will always try this
+        token if the MSAL cache is empty, avoiding the need to re-authenticate.
+        """
         self._logger.debug('get_token() called, running waterfall')
         if self._update_token_by_cache():
             self._logger.debug('returning token from cache')
