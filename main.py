@@ -14,12 +14,16 @@ token = MSALTokenHandler('OneDriveSync',
                             db_filepath='./accounts.db')
 
 
-t = token.get_token()
-print('=============================================================================')
-print(t)
-print('=============================================================================')
-print('=============================================================================')
-t2 = token.get_token()
-print(t2)
-print('=============================================================================')
+# t = token.get_token()
+# print('=============================================================================')
+# print(t)
+# print('=============================================================================')
+# print('=============================================================================')
+# t2 = token.get_token()
+# print(t2)
+# print('=============================================================================')
 
+# print('Trying to acquire token with fake refresh token')
+# t = token._pca.acquire_token_by_refresh_token('my-fake-refresh-token-test', scopes=['User.Read'])
+# assert 'error' not in t, f'error from acquire_token_by_refresh_token():  {t["error"]} | {t["error_description"]}'
+# print(t)

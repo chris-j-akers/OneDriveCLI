@@ -6,7 +6,24 @@ logger = logging.getLogger(__name__)
 
 class MSALTokenHandler:
     
-    def __init__(self, app_name, client_id, authority, scopes=['User.Read'], db_filepath='./tokens') -> None:
+    def __init__(self, app_name, client_id, authority, scopes=['User.Read'], db_filepath='./tokens.db') -> None:
+        """
+        MSALTokenHandler handles retrieving tokens from MSAL and persists the 
+        associated refresh token to a `SqLite` db for future use.
+
+        Args:
+            `app_name` (`string`)   : Name of your application (used to pull the 
+            token from storage, does not have to match the name in Azure)
+            `client_id` (`string`)  : The app_id/client_id of your registered app 
+            taken from the Azure portal
+            `authority` (`string`)  : The URL end-point of the Azure authority provides tokens for your app (see [Azure documentation](https://learn.microsoft.com/en-us/entra/identity-platform/msal-client-application-configuration))
+            `scopes` (`[string]`)   : List of scopes required, defaults to 'User.Read' (see [Azure documentation](https://learn.microsoft.com/en-us/graph/permissions-reference))
+            `db_filepath` (`string`): The path and name of the `SQLite3` database 
+            used to store refresh tokens (defaults to './tokens.db')
+
+        Returns:
+            `MSALTokenHandler`      : A new `MSALTokenHandler` object
+        """
         self._logger = logger.getChild(__class__.__name__)
         self._app_name = app_name
         self._scopes = scopes
@@ -52,30 +69,42 @@ class MSALTokenHandler:
 
     def get_token(self):
         """
-        Retrieves a new token using the PublicClientApplication class from MSAL.
+        Return a new token fetched using the MSAL `PublicClientApplication`
+        class.
 
         Attempts are made in the following order:
 
-        1. Silently, using the MSAL built-in token cache
-        2. Using a refresh token loaded from the Sqlite DB
-        3. Interactively - Assumes a default browser is set
+        1. Silently, using the `MSAL` built-in token cache
+        2. With a refresh token loaded from storage
+        3. Interactively by presenting a browser with the MSFT login page 
+        (assumes a default browser is set)
 
-        Once a token is retrieved, its associated refresh token is persisted to
-        the Sqlite DB for future use. Subsequent attempts will always try this
-        token if the MSAL cache is empty, avoiding the need to re-authenticate.
+        If none of these methods succeed, the function will fail fast with an 
+        assert error.
+
+        Once a token is retrieved, its associated refresh token is persisted 
+        to the Sqlite DB for future use. Subsequent attempts will always try 
+        this token if the MSAL cache is empty, avoiding the need to 
+        re-authenticate. This is even if the program has been stopped entirely
+        and restarted at a later time.
+
+        Returns:
+            `string` : An `MSAL` access token
         """
         self._logger.debug('get_token() called, running waterfall')
 
         # MSAL Cache
         if self._pca.get_accounts() != []:
             account = self._pca.get_accounts()[0]
-            self._logger.debug(f'Found cached account for {account['username']}, acquiring silently')    
+            self._logger.debug(f'Found cached account for {account["username"]}, acquiring silently')    
             token_data = self._pca.acquire_token_silent(account=self._pca.get_accounts()[0], scopes=self._scopes)
             if 'error' not in token_data:
                 # There is no refresh token sent back with this one as it's the same as the previous token, anyway
                 return token_data['access_token']
+            else:
+                self._logger.debug(f'error from acquire_token_silent():  {token_data["error"]} | {token_data["error_description"]}')
 
-        # Refresh Tokee
+        # Refresh Token
         refresh_token = self._get_refresh_token_from_db()
         if refresh_token != '':
             self._logger.debug('trying refresh token')
@@ -83,10 +112,15 @@ class MSALTokenHandler:
             if 'error' not in token_data:
                 self._upsert_refresh_token_in_db(token_data['refresh_token'])
                 return token_data['access_token']
+            else:
+                self._logger.debug('error from acquire_token_by_refresh_token():  {token_data["error"]} | {token_data["error_description"]}')
 
         # Interactive
         token_data = self._pca.acquire_token_interactive(scopes=self._scopes)
-        if 'error' not in token_data:
-            self._upsert_refresh_token_in_db(token_data['refresh_token'])
-            return token_data['access_token']
 
+        # We should fail-fast if there's an error at this point. It's over, man.
+        assert 'error' not in token_data, f'unable to get token, error from acquire_token_by_refresh_token():  {token_data["error"]} | {token_data["error_description"]}'
+        
+        # We good.
+        self._upsert_refresh_token_in_db(token_data['refresh_token'])
+        return token_data['access_token']
