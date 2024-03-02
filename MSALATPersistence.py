@@ -112,17 +112,16 @@ class MSALTokenHandler:
             token_data = self._pca.acquire_token_by_refresh_token(refresh_token=refresh_token, scopes=self._scopes)
             if 'error' not in token_data:
                 self._upsert_refresh_token_in_db(token_data['refresh_token'])
-                return token_data
+                return token_data['access_token']
             else:
                 self._logger.debug('error from acquire_token_by_refresh_token():  {token_data["error"]} | {token_data["error_description"]}')
 
         # Interactive
         token_data = self._pca.acquire_token_interactive(scopes=self._scopes)
-        print(token_data)
 
         # We should fail-fast if there's an error at this point. It's over, man.
         assert 'error' not in token_data, f'unable to get token, error from acquire_token_by_refresh_token():  {token_data["error"]} | {token_data["error_description"]}'
         
         # We good.
         self._upsert_refresh_token_in_db(token_data['refresh_token'])
-        return token_data
+        return token_data['access_token']

@@ -4,24 +4,40 @@ import logging
 import json
 import jwt
 import requests
+import urllib.parse
+import base64
 # App/Client ID: 9806a116-6f7d-4154-a06e-0c887dd51eed
 # Tenant ID: 42a7cc42-d023-4e93-898d-3777ba423ebe
 
 
 def main():
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.ERROR)
     token_handler = MSALTokenHandler('OneDriveSync',
                                 client_id='9806a116-6f7d-4154-a06e-0c887dd51eed', 
                                 authority='https://login.microsoftonline.com/consumers',
-                                scopes=['onedrive.readonly'],
+                                scopes=['Files.Read', 'User.Read'],
                                 db_filepath='./accounts.db')
+   
+    GRAPH_ENDPOINT = 'https://graph.microsoft.com/v1.0'
+    ONE_DRIVE = '/me/drive'
+    
+    api_headers = {
+        "Authorization": f"bearer {token_handler.get_token()}",
+        "Accept": "application/json"
+    }
+    response = requests.get(GRAPH_ENDPOINT + ONE_DRIVE, headers=api_headers)
+    json_response = json.dumps(response.json(), indent=2)
+    print(json_response)
+    
+    drive_id = response.json()['id']
+    response = requests.get(GRAPH_ENDPOINT + f"/drives/{drive_id}/root/children", headers=api_headers)
 
-    t = token_handler.get_token()
-    json_formatted_str = json.dumps(t, indent=2)
+    json_response = json.dumps(response.json(), indent=2)
+    print(json_response)
 
-    print(json_formatted_str)
-
+if __name__ == '__main__':
+    main()
 
 
     #jwt.decode(t, "secret", algorithms=["HS256"])
@@ -38,19 +54,3 @@ def main():
 # result_json = result.json()
 # something = result.text
 # print(something)
-
-    GRAPH_ENDPOINT = 'https://graph.microsoft.com/v1.0'
-    ONE_DRIVE = '/me/drive'
-
-    api_headers = {
-        "Authorization": f"Bearer {t['access_token']}",
-        "Accept": "application/json"
-    }
-    print(api_headers)
-    r = requests.get(GRAPH_ENDPOINT + ONE_DRIVE, headers=api_headers)
-    
-    print(r.content)
-
-if __name__ == '__main__':
-    main()
-
