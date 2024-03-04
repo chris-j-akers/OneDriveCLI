@@ -5,6 +5,8 @@ logger = logging.getLogger(__name__)
                            
 class OneDriveSynch:
 
+# private:
+    
     def __init__(self, settings_db='./settings.db') -> None:
         self._logger = logger.getChild(__class__.__name__)
         self._logger.debug('creating OneDriveSynch object')
@@ -42,7 +44,20 @@ class OneDriveSynch:
         result = cursor.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchall()
         cursor.close()
         return result[0][0]
-        
+
+    def _wrangle_relative_path(self, path):
+        self._logger.debug(f"attempting to wrangle new path from '{path}'")
+        cwd = self._cwd.split('/')
+        nwd = [dir for dir in path.split('/') if dir not in ['.', '']]
+        for dir in nwd:
+            if dir == '..':
+                cwd.pop()
+            else:
+                cwd.append(dir)
+        return cwd if len(cwd) == 1 else '/'.join(cwd)
+
+# public:
+    
     def authenticate(self):
         pass
 
@@ -61,23 +76,14 @@ class OneDriveSynch:
         self._cwd = self._wrangle_relative_path(path)
         self._upsert_setting('cwd', self._cwd)
 
-    def _wrangle_relative_path(self, path):
-        self._logger.debug(f"attempting to wrangle new path from '{path}'")
-        cwd = self._cwd.split('/')
-        nwd = [dir for dir in path.split('/') if dir not in ['.', '']]
-        for dir in nwd:
-            if dir == '..':
-                cwd.pop()
-            else:
-                cwd.append(dir)
-        return cwd if len(cwd) == 1 else '/'.join(cwd)
+    def pwd(self):
+        return self._cwd
 
-
-    def ls():
+    def ls(self):
         pass
 
-    def cpl(remote_path, local_path):
+    def get(remote_path, local_path):
         pass
 
-    def cpr(local_path, remote_path):
+    def put(local_path, remote_path):
         pass
