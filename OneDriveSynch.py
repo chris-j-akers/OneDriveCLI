@@ -48,8 +48,21 @@ class OneDriveSynch:
 
     def cd(self, path):
         self._logger.debug(f'attempting to change directory to "{path}"')
+        if path == '/':
+            self._cwd = '/root'
+            self._upsert_setting('cwd', self._cwd)
+            return
         if path[0] == '/':
             self._cwd = ''
+            self._cwd = self._wrangle_relative_path(path)
+            self._upsert_setting('cwd', self._cwd)
+            return
+        
+        self._cwd = self._wrangle_relative_path(path)
+        self._upsert_setting('cwd', self._cwd)
+
+    def _wrangle_relative_path(self, path):
+        self._logger.debug(f"attempting to wrangle new path from '{path}'")
         cwd = self._cwd.split('/')
         nwd = [dir for dir in path.split('/') if dir not in ['.', '']]
         for dir in nwd:
@@ -57,8 +70,8 @@ class OneDriveSynch:
                 cwd.pop()
             else:
                 cwd.append(dir)
-        self._cwd = cwd if len(cwd) == 1 else '/'.join(cwd)
-        self._upsert_setting('cwd', self._cwd)
+        return cwd if len(cwd) == 1 else '/'.join(cwd)
+
 
     def ls():
         pass

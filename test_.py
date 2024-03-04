@@ -188,3 +188,22 @@ class TestCD:
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
 
+    def test_root(self):
+        test_settings_file = './test_settings.db'
+        if os.path.exists(test_settings_file):
+            os.remove(test_settings_file)
+        ods = OneDriveSynch(settings_db=test_settings_file)
+        assert ods._cwd == '/root'
+
+        ods.cd('/root/path/to/my/current/dir')
+        assert ods._cwd == '/root/path/to/my/current/dir'
+
+        new_cwd = '/'
+        ods.cd(new_cwd)
+        assert ods._cwd == '/root'
+
+        db_cwd = ods._get_setting('cwd')
+        assert db_cwd == '/root'
+
+        if os.path.exists(test_settings_file):
+            os.remove(test_settings_file)
