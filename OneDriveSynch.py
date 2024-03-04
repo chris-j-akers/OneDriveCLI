@@ -1,9 +1,14 @@
 import sqlite3
 import logging
+from MSALATPersistence import MSALTokenHandler as TokenHandler
 
 logger = logging.getLogger(__name__)
                            
 class OneDriveSynch:
+
+    CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
+    AUTHORITY='https://login.microsoftonline.com/consumers'
+    SCOPES=['Files.Read', 'User.Read']
 
 # private:
     
@@ -12,7 +17,11 @@ class OneDriveSynch:
         self._logger.debug('creating OneDriveSynch object')
         self._initialise_db(settings_db)
         self.cd('/root')
-        pass
+        self._token_handler = TokenHandler(app_name='onedrive-synch', 
+                                           client_id=self.CLIENT_ID, 
+                                           authority=self.AUTHORITY, 
+                                           scopes=self.SCOPES, 
+                                           db_filepath=settings_db)
 
     def _initialise_db(self, settings_db):
         self._logger.debug('initialising settings database')
@@ -54,6 +63,7 @@ class OneDriveSynch:
                 cwd.pop()
             else:
                 cwd.append(dir)
+        self._logger.debug(f"new path is '{cwd}'")
         return cwd if len(cwd) == 1 else '/'.join(cwd)
 
 # public:
@@ -72,7 +82,6 @@ class OneDriveSynch:
             self._cwd = self._wrangle_relative_path(path)
             self._upsert_setting('cwd', self._cwd)
             return
-        
         self._cwd = self._wrangle_relative_path(path)
         self._upsert_setting('cwd', self._cwd)
 

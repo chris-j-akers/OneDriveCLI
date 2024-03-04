@@ -20,6 +20,10 @@ class TestInitialisation:
         cursor = ods._settings_db.cursor()
         result = cursor.execute('SELECT value FROM settings WHERE key = "cwd"').fetchall()
         assert result[0][0] == '/root'
+
+        result = cursor.execute('SELECT name FROM sqlite_master WHERE type="table" AND name="token";').fetchall()
+        assert result[0][0] == 'token'
+
         cursor.close()
 
         os.remove(test_settings_file)
@@ -31,6 +35,8 @@ class TestInitialisation:
         cursor = db.cursor()
         cursor.execute('CREATE TABLE settings (key TEXT, value TEXT, PRIMARY KEY (key))')
         cursor.execute('INSERT INTO settings (key, value) VALUES ("cwd", "/root/my/current/path")')
+        cursor.execute('CREATE TABLE token (app_name TEXT, refresh_token TEXT, PRIMARY KEY (app_name))')
+        cursor.execute('INSERT INTO token (app_name, refresh_token) VALUES("onedrive-synch", "a_test_token_string")')
         cursor.close()
 
     def test_initialise_from_existing_db(self):
@@ -46,6 +52,8 @@ class TestInitialisation:
         cursor = db.cursor()
         result = cursor.execute('SELECT value FROM settings WHERE key = "cwd"').fetchall()
         assert result[0][0] == '/root/my/current/path'
+        result = cursor.execute('SELECT refresh_token from token WHERE app_name = "onedrive-synch"').fetchall()
+        assert result[0][0] == 'a_test_token_string'
         cursor.close()
 
         os.remove(test_settings_file)
