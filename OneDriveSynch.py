@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 import requests
-import json
+from datetime import datetime
 from MSALATPersistence import MSALTokenHandler as TokenHandler
 
 logger = logging.getLogger(__name__)
@@ -12,6 +12,22 @@ class OneDriveSynch:
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
     AUTHORITY='https://login.microsoftonline.com/consumers'
     SCOPES=['Files.Read.All']
+
+    class OneDriveItem:
+
+        def __init__(self, item_json):
+            self.id = item_json['id']
+            self.name = item_json['name']
+            self.created_by = item_json['createdBy']['user']['displayName']
+            self.last_modified_by = item_json['lastModifiedBy']['user']['displayName']
+            self.created = datetime.fromisoformat(item_json['fileSystemInfo']['createdDateTime'])
+            self.modified =datetime.fromisoformat(item_json['fileSystemInfo']['lastModifiedDateTime'])
+            self.size = int(item_json['size'])
+            self.type = 'd' if 'folder' in item_json else 'f'
+
+        def __str__(self):
+            #return f"{self.type} '{self.created_by}' '{self.last_modified_by}' {self.size} {str(self.created)} {str(self.modified)} {self.name}"
+            return '{} {: >} {: >} {: >10} {: <}'.format(self.type, self.created_by, self.last_modified_by, self.size, self.name)
 
 # private:
     
@@ -25,9 +41,10 @@ class OneDriveSynch:
                                            scopes=self.SCOPES, 
                                            db_filepath=settings_db)
         
-        # If this is a new db it will be None
+        self._initialised = True if self._get_setting('is_initialised') == 'true' else False
         self._drive_id = self._get_setting('drive_id')
-        self._initialised = True if self._drive_id is not None else False
+        self._root = self._get_api_headers('root')
+        self._cwd = self._get_setting('cwd')
         self._logger.debug(f'drive id set to "{self._drive_id}" (if this is "None" then DB is new and Initialise() needs to be run)')
 
     def _setup_db(self, settings_db):
@@ -47,9 +64,7 @@ class OneDriveSynch:
         cursor.execute('CREATE TABLE settings (key TEXT, value TEXT, PRIMARY KEY (key))')
         self._logger.debug('created settings db')
         cursor.close()
-
-    def _get_api_headers(self, token):
-        return {"Authorization": f"bearer {token}", "Accept": "application/json"}
+        self._upsert_setting('is_initialised', 'false')
 
     def _upsert_setting(self, key, value):
         self._logger.debug(f'updating value "{key}" to "{value}" in settings db')
@@ -70,7 +85,7 @@ class OneDriveSynch:
         return True
             
     def _wrangle_relative_path(self, path):
-        self._logger.debug(f"attempting to wrangle new path from '{path}'")
+        self._logger.debug(f"attempting to wrangle new path from '{path}' with cwd as {self._cwd}")
         cwd = self._cwd.split('/')
         nwd = [dir for dir in path.split('/') if dir not in ['.', '']]
         for dir in nwd:
@@ -79,7 +94,15 @@ class OneDriveSynch:
             else:
                 cwd.append(dir)
         self._logger.debug(f"new path is '{cwd}'")
-        return cwd if len(cwd) == 1 else '/'.join(cwd)
+        return cwd[0] if len(cwd) == 1 else '/'.join(cwd)
+
+    def _get_api_headers(self, token):
+        return {"Authorization": f"bearer {token}", "Accept": "application/json"}
+    
+    def _onedrive_api_get(self, url):
+        self._logger.debug(f'sending get request to {url}')
+        response = requests.get(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
+        return response
 
 # public:
     
@@ -95,42 +118,41 @@ class OneDriveSynch:
         self._logger.debug('got drive id from MSFT Graph, inserting into Settings db')
         self._drive_id = json['id']
         self._upsert_setting('drive_id', self._drive_id)
+        self._root = f'/drives/{self._drive_id}/root:'
+        self._cwd = '/'
+        self._upsert_setting('root', self._root)
+        self._upsert_setting('cwd', self._cwd)
         self._initialised = True
+        self._upsert_setting('is_initialised', 'true')
+        self._logger.debug('initialisation complete')
         self.cd('/')
 
     def cd(self, path):
-        if not self._is_initialised():
-            return
         self._logger.debug(f'attempting to change directory to "{path}"')
         if path == '/':
-            self._cwd = f'/drives/{self._drive_id}/root:'
+            self._cwd = f''
             self._upsert_setting('cwd', self._cwd)
             return
         if path[0] == '/':
             self._cwd = ''
-            self._cwd = self._wrangle_relative_path(path)
-            self._upsert_setting('cwd', self._cwd)
-            return
+        print(path)
         self._cwd = self._wrangle_relative_path(path)
         self._upsert_setting('cwd', self._cwd)
 
     def pwd(self):
-        if not self._is_initialised():
-            return
-        return self._cwd
+        return self._root + self._cwd
     
     def ls(self):
         # If we're at root, lop off the : and just add /children
-        # If not, then work out path in-between and add :/children
-        if not self._is_initialised():
-            return
-        response = requests.get('https://graph.microsoft.com/v1.0/drives/539FB3F9A5FE3189/root:/health:/children', headers=self._get_api_headers(self._token_handler.get_token()))
-        print(f'{self.ONEDRIVE_ENDPOINT}{self._cwd}:/children')
-        # response = requests.get(f'{self.ONEDRIVE_ENDPOINT}{self._cwd + "/children"}', 
-        #                         headers=self._get_api_headers(self._token_handler.get_token()))
-        # print(response)
-        # json_response = json.dumps(response.json(), indent=2)
-        # return json_response
+        url = self._root[:-1] + '/children' if self._cwd == '/' else self._root + self._cwd + ':/children'
+        response = self._onedrive_api_get(url)
+        json = response.json()
+        if 'error' in json:
+            return f'error: {json['error']['code']} | {json['error']['message']}'
+        items = []
+        for item in  json['value']:
+            items.append(self.OneDriveItem(item))
+        return f'{url}\n' + ''.join([str(item) + '\n' for item in items])
 
     def get(remote_path, local_path):
         pass
