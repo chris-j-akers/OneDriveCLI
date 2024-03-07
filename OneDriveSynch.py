@@ -43,7 +43,7 @@ class OneDriveSynch:
         
         self._initialised = True if self._get_setting('is_initialised') == 'true' else False
         self._drive_id = self._get_setting('drive_id')
-        self._root = self._get_api_headers('root')
+        self._root = self._get_setting('root')
         self._cwd = self._get_setting('cwd')
         self._logger.debug(f'drive id set to "{self._drive_id}" (if this is "None" then DB is new and Initialise() needs to be run)')
 
@@ -76,25 +76,24 @@ class OneDriveSynch:
         self._logger.debug(f'getting value for "{key}" from settings db')
         cursor = self._settings_db.cursor()
         result = cursor.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchall()
-        return result[0][0] if cursor.rowcount > 0 else None
+        self._logger.debug(f'value is "{result[0][0]}"')
+        return result[0][0] if len(result) > 0 else None
     
     def _is_initialised(self):
         if self._initialised == False:
             print('initialisation has not been run, please run "ods initialise" first')
             return False
         return True
-            
-    def _wrangle_relative_path(self, path):
-        self._logger.debug(f"attempting to wrangle new path from '{path}' with cwd as {self._cwd}")
-        cwd = self._cwd.split('/')
-        nwd = [dir for dir in path.split('/') if dir not in ['.', '']]
-        for dir in nwd:
-            if dir == '..':
-                cwd.pop()
-            else:
-                cwd.append(dir)
-        self._logger.debug(f"new path is '{cwd}'")
-        return cwd[0] if len(cwd) == 1 else '/'.join(cwd)
+    
+    def _wrangle_relative_path(self, old_path, new_path):
+        self._logger.debug(f"attempting to wrangle new path from '{old_path}' with relative path as {new_path}") 
+        if new_path in ['/']:
+            return new_path
+        old = [path for path in old_path.split('/') if path not in ['','.']]
+        new = [path for path in new_path.split('/') if path not in ['','.']]
+        for path in new:
+            old.pop() if path == '..' else old.append(path)
+        return '/' if old == [] else '/' + '/'.join(old)
 
     def _get_api_headers(self, token):
         return {"Authorization": f"bearer {token}", "Accept": "application/json"}
@@ -129,14 +128,7 @@ class OneDriveSynch:
 
     def cd(self, path):
         self._logger.debug(f'attempting to change directory to "{path}"')
-        if path == '/':
-            self._cwd = f''
-            self._upsert_setting('cwd', self._cwd)
-            return
-        if path[0] == '/':
-            self._cwd = ''
-        print(path)
-        self._cwd = self._wrangle_relative_path(path)
+        self._cwd = self._wrangle_relative_path(self._cwd, path)
         self._upsert_setting('cwd', self._cwd)
 
     def pwd(self):
