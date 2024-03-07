@@ -14,7 +14,6 @@ class OneDriveSynch:
     SCOPES=['Files.Read.All']
 
     class OneDriveItem:
-
         def __init__(self, item_json):
             self.id = item_json['id']
             self.name = item_json['name']
@@ -76,24 +75,17 @@ class OneDriveSynch:
         self._logger.debug(f'getting value for "{key}" from settings db')
         cursor = self._settings_db.cursor()
         result = cursor.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchall()
-        self._logger.debug(f'value is "{result[0][0]}"')
         return result[0][0] if len(result) > 0 else None
-    
-    def _is_initialised(self):
-        if self._initialised == False:
-            print('initialisation has not been run, please run "ods initialise" first')
-            return False
-        return True
-    
+       
     def _wrangle_relative_path(self, old_path, new_path):
         self._logger.debug(f"attempting to wrangle new path from '{old_path}' with relative path as {new_path}") 
-        if new_path in ['/']:
+        if new_path == '/':
             return new_path
         old = [path for path in old_path.split('/') if path not in ['','.']]
         new = [path for path in new_path.split('/') if path not in ['','.']]
         for path in new:
             old.pop() if path == '..' else old.append(path)
-        return '/' if old == [] else '/' + '/'.join(old)
+        return '/' if old == [] else ('/' + '/'.join(old))
 
     def _get_api_headers(self, token):
         return {"Authorization": f"bearer {token}", "Accept": "application/json"}
@@ -126,10 +118,14 @@ class OneDriveSynch:
         self._logger.debug('initialisation complete')
         self.cd('/')
 
+    def is_initialised(self):
+        return self._initialised
+
     def cd(self, path):
         self._logger.debug(f'attempting to change directory to "{path}"')
         self._cwd = self._wrangle_relative_path(self._cwd, path)
         self._upsert_setting('cwd', self._cwd)
+        return self._cwd
 
     def pwd(self):
         return self._root + self._cwd
