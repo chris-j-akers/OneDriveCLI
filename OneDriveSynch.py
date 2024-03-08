@@ -34,16 +34,18 @@ class OneDriveSynch:
         self._logger = logger.getChild(__class__.__name__)
         self._logger.debug('creating OneDriveSynch object')
         self._setup_db(settings_db)
-        self._token_handler = TokenHandler(app_name='onedrive-synch', 
-                                           client_id=self.CLIENT_ID, 
-                                           authority=self.AUTHORITY, 
-                                           scopes=self.SCOPES, 
-                                           db_filepath=settings_db)
-        
-        self._initialised = True if self._get_setting('is_initialised') == 'true' else False
-        self._drive_id = self._get_setting('drive_id')
-        self._root = self._get_setting('root')
-        self._cwd = self._get_setting('cwd')
+        self._token_handler = TokenHandler(app_name='onedrive-synch', client_id=self.CLIENT_ID, authority=self.AUTHORITY, scopes=self.SCOPES, db_filepath=settings_db)
+        if self._get_setting('is_initialised') == 'true':
+            self._initialised = True
+            self._drive_id = self._get_setting('drive_id')
+            self._root = self._get_setting('root')
+            self._cwd = self._get_setting('cwd')
+        else:
+            self._initialised = False
+            self._drive_id = None
+            self._root = None
+            self._cwd = None
+
         self._logger.debug(f'drive id set to "{self._drive_id}" (if this is "None" then DB is new and Initialise() needs to be run)')
 
     def _setup_db(self, settings_db):
@@ -81,7 +83,7 @@ class OneDriveSynch:
         self._logger.debug(f"attempting to wrangle new path from '{old_path}' with relative path as {new_path}") 
         if new_path == '/':
             return new_path
-        old = [path for path in old_path.split('/') if path not in ['','.']]
+        old = [path for path in old_path.split('/') if path not in ['','.']] if new_path[0] != '/' else []
         new = [path for path in new_path.split('/') if path not in ['','.']]
         for path in new:
             old.pop() if path == '..' else old.append(path)
