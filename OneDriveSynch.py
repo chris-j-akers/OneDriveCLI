@@ -1,6 +1,7 @@
 import sqlite3
 import logging
 import requests
+import json
 from datetime import datetime
 from MSALATPersistence import MSALTokenHandler as TokenHandler
 
@@ -15,6 +16,11 @@ class OneDriveSynch:
 
 # private:
     
+    def _dbg_print_json(self, json_data):
+        # json_object = json.loads(json_data)
+        json_formatted_str = json.dumps(json_data, indent=2)
+        print(json_formatted_str)
+
     def __init__(self, settings_db='./settings.db') -> None:
         self._logger = logger.getChild(__class__.__name__)
         self._logger.debug('creating OneDriveSynch object')
@@ -110,7 +116,14 @@ class OneDriveSynch:
 
     def cd(self, path):
         self._logger.debug(f'attempting to change directory to "{path}"')
-        self._cwd = self._wrangle_relative_path(self._cwd, path)
+        nwd = self._wrangle_relative_path(self._cwd, path)
+        # Check path is valid
+        root = self._root[:-1] if nwd == '/' else self._root
+        response = self._onedrive_api_get(root + nwd)
+        if 'error' in response.json():
+            return f'error: invaid path ({self._root + nwd})'
+
+        self._cwd = nwd
         self._upsert_setting('cwd', self._cwd)
         return self._root + self._cwd
 
@@ -133,16 +146,19 @@ class OneDriveSynch:
         for item in json['value']:
             createdDateTime_str = datetime.strftime(datetime.fromisoformat(item['fileSystemInfo']['createdDateTime']), time_fmt)
             lastModifiedDateTime_str = datetime.strftime(datetime.fromisoformat(item['fileSystemInfo']['lastModifiedDateTime']), time_fmt)
-            items.append({
-                            'id': item['id'],
-                            'createdBy' : item['createdBy']['user']['displayName'],
-                            'createdDateTime' : createdDateTime_str,
-                            'lastModifiedDateTime': lastModifiedDateTime_str,
-                            'size': item['size'],
-                            'lastModifiedBy': item['lastModifiedBy']['user']['displayName'],
-                            'name': item['name'],
-                            'type': 'd' if 'folder' in item else 'f'
-                         })
+            items.append(
+                            {
+                                'id': item['id'],
+                                'createdBy' : item['createdBy']['user']['displayName'],
+                                'createdDateTime' : createdDateTime_str,
+                                'lastModifiedDateTime': lastModifiedDateTime_str,
+                                'size': item['size'],
+                                'lastModifiedBy': item['lastModifiedBy']['user']['displayName'],
+                                'name': item['name'],
+                                'type': 'd' if 'folder' in item else 'f',
+                                'webUrl': item['webUrl'],
+                            }
+                        )
             field_lengths['id'] = max(len(item['id']), field_lengths.get(id, 0))
             field_lengths['createdBy'] = max(len(item['createdBy']['user']['displayName']), field_lengths.get('displayName',0))
             field_lengths['createdDateTime'] = max(len(createdDateTime_str), field_lengths.get('createdDateTime', 0))
@@ -150,17 +166,20 @@ class OneDriveSynch:
             field_lengths['size'] = max(len(str(item['size'])), field_lengths.get('size', 0))
             field_lengths['lastModifiedBy'] = max(len(item['lastModifiedBy']['user']['displayName']), field_lengths.get('displayName',0))
             field_lengths['name'] = max(len(item['name']), field_lengths.get('name',0))
+            field_lengths['webUrl'] = max(len(item['webUrl']), field_lengths.get('webUrl',0))
 
-        listing = ''
+        listing = f'{json['@odata.context']}\n'
         for item in items:
-            listing += ( f'{item['type']:<{field_lengths['type']+2}}'
+            listing += ( 
+                         f'{item['type']:<{field_lengths['type']+2}}'
+                         f'{item['webUrl']:<{field_lengths['webUrl']+2}}'
                          f'{item['createdBy']:<{field_lengths['createdBy']+2}}'
                          f'{item['createdDateTime']:<{field_lengths['createdDateTime']+2}}'
                          f'{item['lastModifiedBy']:<{field_lengths['lastModifiedBy']+2}}'
                          f'{item['lastModifiedDateTime']:<{field_lengths['lastModifiedDateTime']}}'
                          f'{item['size']:>{field_lengths['size']+2}}'
                          f'  '
-                         f'{item['name']:<{field_lengths['name']}}'
+                         f'{item['name']:<{field_lengths['name']+2}}'
                          f'\n'
                        )
         return listing
