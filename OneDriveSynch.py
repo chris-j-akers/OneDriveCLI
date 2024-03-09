@@ -137,6 +137,7 @@ class OneDriveSynch:
         dict[key] = max(dict.get(key,0), value)
 
     def ls(self):
+        time_fmt = '%Y-%m-%d %H:%M:%S'
         # If we're at root, lop off the : and just add /children
         url = self._root[:-1] + '/children' if self._cwd == '/' else self._root + self._cwd + ':/children'
         response = self._onedrive_api_get(url)
@@ -147,30 +148,40 @@ class OneDriveSynch:
         # Finangling required to get nice, justified output
         items = []
         field_lengths = {}
-        for item in json['value']:
-            items.append([
-                            item['id'],
-                            item['createdBy']['user']['displayName'],
-                            item['fileSystemInfo']['createdDateTime'],
-                            item['fileSystemInfo']['lastModifiedDateTime'],
-                            item['size'],
-                            item['lastModifiedBy']['user']['displayName'],
-                            item['name'],
-                            'd' if 'folder' in item else 'f'
-                         ])
-            field_lengths['id'] = max(len(item['id']), field_lengths.get(id, 0))
-            field_lengths['displayName'] = max(len(item['createdBy']['user']['displayName']), field_lengths.get('displayName',0))
-            field_lengths['createdDateTime'] = max(len(item['fileSystemInfo']['createdDateTime']), field_lengths.get('createdDateTime', 0))
-            field_lengths['lastModifiedDateTime'] = max(len(item['fileSystemInfo']['lastModifiedDateTime']), field_lengths.get('lastModifiedDateTime',0))
-            field_lengths['size'] = max(len(str(item['size'])), field_lengths.get('size', 0))
-            field_lengths['displayName'] = max(len(item['lastModifiedBy']['user']['displayName']), field_lengths.get('displayName',0))
-            field_lengths['name'] = max(len(item['name']), field_lengths.get('name',0))
-          
         field_lengths['type'] = 1
+        for item in json['value']:
+            createdDateTime_str = datetime.strftime(datetime.fromisoformat(item['fileSystemInfo']['createdDateTime']), time_fmt)
+            lastModifiedDateTime_str = datetime.strftime(datetime.fromisoformat(item['fileSystemInfo']['lastModifiedDateTime']), time_fmt)
+            items.append({
+                            'id': item['id'],
+                            'createdBy' : item['createdBy']['user']['displayName'],
+                            'createdDateTime' : createdDateTime_str,
+                            'lastModifiedDateTime': lastModifiedDateTime_str,
+                            'size': item['size'],
+                            'lastModifiedBy': item['lastModifiedBy']['user']['displayName'],
+                            'name': item['name'],
+                            'type': 'd' if 'folder' in item else 'f'
+                         })
+            field_lengths['id'] = max(len(item['id']), field_lengths.get(id, 0))
+            field_lengths['createdBy'] = max(len(item['createdBy']['user']['displayName']), field_lengths.get('displayName',0))
+            field_lengths['createdDateTime'] = max(len(createdDateTime_str), field_lengths.get('createdDateTime', 0))
+            field_lengths['lastModifiedDateTime'] = max(len(lastModifiedDateTime_str), field_lengths.get('lastModifiedDateTime',0))
+            field_lengths['size'] = max(len(str(item['size'])), field_lengths.get('size', 0))
+            field_lengths['lastModifiedBy'] = max(len(item['lastModifiedBy']['user']['displayName']), field_lengths.get('displayName',0))
+            field_lengths['name'] = max(len(item['name']), field_lengths.get('name',0))
+
         listing = ''
         for item in items:
-            print(f'{item['type']:<{field_lengths['type']+2}}{item['createdBy']:<{field_lengths['createdBy']+2}}{item['createdDateTime']:<{field_lengths['createdDateTime']+2}}{item['lastModifiedDateTime']:>{field_lengths['lastModifiedDateTime']}}  {item['size']:<{field_lengths['size']+2}}{item['displayName']:<{field_lengths['displayName']}}')
-
+            listing += ( f'{item['type']:<{field_lengths['type']+2}}'
+                         f'{item['createdBy']:<{field_lengths['createdBy']+2}}'
+                         f'{item['createdDateTime']:<{field_lengths['createdDateTime']+2}}'
+                         f'{item['lastModifiedBy']:<{field_lengths['lastModifiedBy']+2}}'
+                         f'{item['lastModifiedDateTime']:<{field_lengths['lastModifiedDateTime']}}'
+                         f'{item['size']:>{field_lengths['size']+2}}'
+                         f'  '
+                         f'{item['name']:<{field_lengths['name']}}'
+                         f'\n'
+                       )
         return listing
 
     def get(remote_path, local_path):
@@ -179,6 +190,3 @@ class OneDriveSynch:
     def put(local_path, remote_path):
         pass
 
-
-    [ max length of field[n] in list where n = count
-     
