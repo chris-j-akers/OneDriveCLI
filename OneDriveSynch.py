@@ -13,9 +13,10 @@ class OneDriveSynch:
     AUTHORITY='https://login.microsoftonline.com/consumers'
     SCOPES=['Files.Read.All']
 
-    class OneDriveItem:
+    class OneDriveListing:
         def __init__(self, item_json):
             self.id = item_json['id']
+            self.id_len = max(len(self.id_len), 0)
             self.name = item_json['name']
             self.created_by = item_json['createdBy']['user']['displayName']
             self.last_modified_by = item_json['lastModifiedBy']['user']['displayName']
@@ -132,6 +133,9 @@ class OneDriveSynch:
     def pwd(self):
         return self._root + self._cwd
     
+    def _ls_check_max(dict, key, value):
+        dict[key] = max(dict.get(key,0), value)
+
     def ls(self):
         # If we're at root, lop off the : and just add /children
         url = self._root[:-1] + '/children' if self._cwd == '/' else self._root + self._cwd + ':/children'
@@ -139,13 +143,42 @@ class OneDriveSynch:
         json = response.json()
         if 'error' in json:
             return f'error: {json['error']['code']} | {json['error']['message']}'
+
+        # Finangling required to get nice, justified output
         items = []
-        for item in  json['value']:
-            items.append(self.OneDriveItem(item))
-        return f'{url}\n' + ''.join([str(item) + '\n' for item in items])
+        field_lengths = {}
+        for item in json['value']:
+            items.append([
+                            item['id'],
+                            item['createdBy']['user']['displayName'],
+                            item['fileSystemInfo']['createdDateTime'],
+                            item['fileSystemInfo']['lastModifiedDateTime'],
+                            item['size'],
+                            item['lastModifiedBy']['user']['displayName'],
+                            item['name'],
+                            'd' if 'folder' in item else 'f'
+                         ])
+            field_lengths['id'] = max(len(item['id']), field_lengths.get(id, 0))
+            field_lengths['displayName'] = max(len(item['createdBy']['user']['displayName']), field_lengths.get('displayName',0))
+            field_lengths['createdDateTime'] = max(len(item['fileSystemInfo']['createdDateTime']), field_lengths.get('createdDateTime', 0))
+            field_lengths['lastModifiedDateTime'] = max(len(item['fileSystemInfo']['lastModifiedDateTime']), field_lengths.get('lastModifiedDateTime',0))
+            field_lengths['size'] = max(len(str(item['size'])), field_lengths.get('size', 0))
+            field_lengths['displayName'] = max(len(item['lastModifiedBy']['user']['displayName']), field_lengths.get('displayName',0))
+            field_lengths['name'] = max(len(item['name']), field_lengths.get('name',0))
+          
+        field_lengths['type'] = 1
+        listing = ''
+        for item in items:
+            print(f'{item['type']:<{field_lengths['type']+2}}{item['createdBy']:<{field_lengths['createdBy']+2}}{item['createdDateTime']:<{field_lengths['createdDateTime']+2}}{item['lastModifiedDateTime']:>{field_lengths['lastModifiedDateTime']}}  {item['size']:<{field_lengths['size']+2}}{item['displayName']:<{field_lengths['displayName']}}')
+
+        return listing
 
     def get(remote_path, local_path):
         pass
 
     def put(local_path, remote_path):
         pass
+
+
+    [ max length of field[n] in list where n = count
+     
