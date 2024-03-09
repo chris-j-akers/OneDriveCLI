@@ -13,22 +13,6 @@ class OneDriveSynch:
     AUTHORITY='https://login.microsoftonline.com/consumers'
     SCOPES=['Files.Read.All']
 
-    class OneDriveListing:
-        def __init__(self, item_json):
-            self.id = item_json['id']
-            self.id_len = max(len(self.id_len), 0)
-            self.name = item_json['name']
-            self.created_by = item_json['createdBy']['user']['displayName']
-            self.last_modified_by = item_json['lastModifiedBy']['user']['displayName']
-            self.created = datetime.fromisoformat(item_json['fileSystemInfo']['createdDateTime'])
-            self.modified =datetime.fromisoformat(item_json['fileSystemInfo']['lastModifiedDateTime'])
-            self.size = int(item_json['size'])
-            self.type = 'd' if 'folder' in item_json else 'f'
-
-        def __str__(self):
-            #return f"{self.type} '{self.created_by}' '{self.last_modified_by}' {self.size} {str(self.created)} {str(self.modified)} {self.name}"
-            return '{} {: >} {: >} {: >10} {: <}'.format(self.type, self.created_by, self.last_modified_by, self.size, self.name)
-
 # private:
     
     def __init__(self, settings_db='./settings.db') -> None:
