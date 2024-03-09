@@ -128,7 +128,7 @@ class OneDriveSynch:
         self._logger.debug(f'attempting to change directory to "{path}"')
         self._cwd = self._wrangle_relative_path(self._cwd, path)
         self._upsert_setting('cwd', self._cwd)
-        return self._cwd
+        return self._root + self._cwd
 
     def pwd(self):
         return self._root + self._cwd
