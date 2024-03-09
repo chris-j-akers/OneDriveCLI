@@ -22,7 +22,8 @@ if __name__ == '__main__':
         case 'cd':
             print(ods.cd(sys.argv[2]) if len(sys.argv) > 2 else ods.cd('/'))
         case 'ls':
-                print(ods.ls())
+            print(ods.ls())
         case 'pwd':
-                print(ods.pwd())
- 
+            print(ods.pwd())
+        case other:
+            print(f'ods: unknown command: {sys.argv[1]}')

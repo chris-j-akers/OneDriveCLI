@@ -168,7 +168,7 @@ class OneDriveSynch:
             field_lengths['name'] = max(len(item['name']), field_lengths.get('name',0))
             field_lengths['webUrl'] = max(len(item['webUrl']), field_lengths.get('webUrl',0))
 
-        listing = f'{json['@odata.context']}\n'
+        listing = f'{self._root + self._cwd}\n'
         for item in items:
             listing += ( 
                          f'{item['type']:<{field_lengths['type']+2}}'
