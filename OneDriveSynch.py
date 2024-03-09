@@ -132,9 +132,6 @@ class OneDriveSynch:
 
     def pwd(self):
         return self._root + self._cwd
-    
-    def _ls_check_max(dict, key, value):
-        dict[key] = max(dict.get(key,0), value)
 
     def ls(self):
         time_fmt = '%Y-%m-%d %H:%M:%S'
