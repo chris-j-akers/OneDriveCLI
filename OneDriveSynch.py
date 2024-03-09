@@ -2,6 +2,7 @@ import sqlite3
 import logging
 import requests
 import json
+import os
 from datetime import datetime
 from MSALATPersistence import MSALTokenHandler as TokenHandler
 
@@ -31,11 +32,14 @@ class OneDriveSynch:
             self._drive_id = self._get_setting('drive_id')
             self._root = self._get_setting('root')
             self._cwd = self._get_setting('cwd')
+            # Refresh the download URL cache
+            self.ls()
         else:
             self._initialised = False
             self._drive_id = None
             self._root = None
             self._cwd = None
+            self._download_url_cache = {}
 
         self._logger.debug(f'drive id set to "{self._drive_id}" (if this is "None" then DB is new and Initialise() needs to be run)')
 
@@ -143,6 +147,7 @@ class OneDriveSynch:
         items = []
         field_lengths = {}
         field_lengths['type'] = 1
+        self._download_url_cache = {}
         for item in json['value']:
             createdDateTime_str = datetime.strftime(datetime.fromisoformat(item['fileSystemInfo']['createdDateTime']), time_fmt)
             lastModifiedDateTime_str = datetime.strftime(datetime.fromisoformat(item['fileSystemInfo']['lastModifiedDateTime']), time_fmt)
@@ -159,6 +164,7 @@ class OneDriveSynch:
                                 'webUrl': item['webUrl'],
                             }
                         )
+            
             field_lengths['id'] = max(len(item['id']), field_lengths.get(id, 0))
             field_lengths['createdBy'] = max(len(item['createdBy']['user']['displayName']), field_lengths.get('displayName',0))
             field_lengths['createdDateTime'] = max(len(createdDateTime_str), field_lengths.get('createdDateTime', 0))
@@ -184,8 +190,41 @@ class OneDriveSynch:
                        )
         return listing
 
-    def get(remote_path, local_path):
-        pass
+    def get(self, remote_path, local_path):
+        self._logger.debug(f'attempting download of file {remote_path}')
+
+        remote_filename = os.path.basename(remote_path)
+        path = self._wrangle_relative_path(self._cwd, os.path.dirname(remote_path))
+        self._logger.debug(f'got filename: {remote_filename} and path {path}')
+
+        if local_path == '':
+            local_path = f'./{remote_filename}'
+        if local_path[:-1] == '/':
+            local_path = f'{local_path}{remote_filename}'
+
+        self._logger.debug(f'local_path is set to: {local_path}')
+
+        url = f'{self._root[:-1]}/{remote_filename}' if path == '/' else f'{self._root}{path}/{remote_filename}'
+        self._logger.debug(f'item url is {url}')
+
+        response = self._onedrive_api_get(url)
+        json = response.json()
+        if 'error' in json:
+            print(f'error: {json['error']['code']}: {json['error']['message']}')
+            return
+
+        download_url = json['@microsoft.graph.downloadUrl']
+        self._logger.debug(f'download url is: {download_url}')
+        if 'error' in json:
+            return f'error: {json['error']['code']} | {json['error']['message']}'
+        
+        response = requests.get(download_url)
+        if response.status_code != 200:
+            print(f'error: could not download file: status code: {response.status_code}')
+            return
+        
+        open(local_path, 'wb').write(response.content)        
+        self._logger.debug(f'file downloaded to {local_path}')
 
     def put(local_path, remote_path):
         pass

@@ -9,6 +9,7 @@ import sys
 
 if __name__ == '__main__':
     logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
     ods = OneDriveSynch()
 
     if sys.argv[1] == 'init':
@@ -20,10 +21,12 @@ if __name__ == '__main__':
 
     match(sys.argv[1]):
         case 'cd':
-            print(ods.cd(sys.argv[2]) if len(sys.argv) > 2 else ods.cd('/'))
+            print(ods.cd(sys.argv[2] if len(sys.argv) > 2 else '/'))
         case 'ls':
             print(ods.ls())
         case 'pwd':
             print(ods.pwd())
+        case 'get':
+            ods.get(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
         case other:
             print(f'ods: unknown command: {sys.argv[1]}')
