@@ -14,12 +14,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
 
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-        ods._root = '/drives/123456789/root:'
-
-        ods.cd('/root/path/to/my/current/dir')
-        assert ods._cwd == '/root/path/to/my/current/dir'
+        cwd = '/'
+        nwd = ods._wrangle_relative_path(cwd, '/root/path/to/my/current/dir')
+        assert nwd == '/root/path/to/my/current/dir'
 
         if os.path.exists(test_settings_file):
                 os.remove(test_settings_file)
@@ -30,14 +27,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
         
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        ods.cd('/path/to/../')
-        assert ods._cwd == '/path'
+        cwd = '/path/to/my/current/dir'    
+        nwd = ods._wrangle_relative_path(cwd, '/path/to/../')
+        assert nwd == '/path'
 
         if os.path.exists(test_settings_file):
                 os.remove(test_settings_file)
@@ -48,20 +40,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
         
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        # Actual test
-        new_cwd = '../../'
-        ods.cd(new_cwd)
-        assert ods._cwd == '/path/to/my'
-
-        # Check it wrote to the DB properly and can be retrieved
-        db_cwd = ods._get_setting('cwd')
-        assert db_cwd == '/path/to/my'
+        cwd = '/path/to/my/current/dir'
+        nwd = ods._wrangle_relative_path(cwd, '../../')
+        assert nwd == '/path/to/my'
 
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
@@ -72,20 +53,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
         
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-        
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        # Actualy test
-        new_cwd = '../../../my/../'
-        ods.cd(new_cwd)
-        assert ods._cwd == '/path/to'
-        
-        # Check it wrote to the DB properly and can be retrieved
-        db_cwd = ods._get_setting('cwd')
-        assert db_cwd == '/path/to'
+        cwd = '/path/to/my/current/dir'
+        nwd = ods._wrangle_relative_path(cwd, '../../../my/../' )
+        assert nwd == '/path/to'
 
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
@@ -96,20 +66,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
         
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-        
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        # Actual Test
-        new_cwd = './'
-        ods.cd(new_cwd)
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        # Check it wrote to the DB properly and can be retrieved
-        db_cwd = ods._get_setting('cwd')
-        assert db_cwd == '/path/to/my/current/dir'
+        cwd = '/path/to/my/current/dir'
+        nwd = ods._wrangle_relative_path(cwd, './')
+        assert nwd == '/path/to/my/current/dir'
 
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
@@ -120,19 +79,10 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
 
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
+        cwd = ('/path/to/my/current/dir')
         # Actual Test
-        new_cwd = './new/path'
-        ods.cd(new_cwd)
-        assert ods._cwd == '/path/to/my/current/dir/new/path'
-
-        db_cwd = ods._get_setting('cwd')
-        assert db_cwd == '/path/to/my/current/dir/new/path'
+        nwd = ods._wrangle_relative_path(cwd, './new/path')
+        assert nwd == '/path/to/my/current/dir/new/path'
 
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
@@ -143,18 +93,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
 
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        new_cwd = './new/./path'
-        ods.cd(new_cwd)
-        assert ods._cwd == '/path/to/my/current/dir/new/path'
-
-        db_cwd = ods._get_setting('cwd')
-        assert db_cwd == '/path/to/my/current/dir/new/path'
+        cwd = '/path/to/my/current/dir'
+        nwd = ods._wrangle_relative_path(cwd, './new/./path')
+        assert nwd == '/path/to/my/current/dir/new/path'
 
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
@@ -165,18 +106,9 @@ class TestCD:
             os.remove(test_settings_file)
         ods = OneDriveSynch(settings_db=test_settings_file)
 
-        # We pretend we've initialised ods
-        ods._cwd = '/'
-
-        ods.cd('/path/to/my/current/dir')
-        assert ods._cwd == '/path/to/my/current/dir'
-
-        new_cwd = '/'
-        ods.cd(new_cwd)
-        assert ods._cwd == '/'
-
-        db_cwd = ods._get_setting('cwd')
-        assert db_cwd == '/'
+        cwd = '/path/to/my/current/dir'
+        nwd = ods._wrangle_relative_path(cwd, '/')
+        assert nwd == '/'
 
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
