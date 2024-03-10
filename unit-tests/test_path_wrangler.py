@@ -6,7 +6,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from OneDriveSynch import OneDriveSynch
 
 logging.getLogger().setLevel(logging.DEBUG)
-class TestCD:
+
+class TestPathWrangler:
 
     def test_absolute_path(self):
         test_settings_file = './test_settings.db'
@@ -32,7 +33,7 @@ class TestCD:
         assert nwd == '/path'
 
         if os.path.exists(test_settings_file):
-                os.remove(test_settings_file)
+            os.remove(test_settings_file)
 
     def test_double_dots(self):
         test_settings_file = './test_settings.db'
