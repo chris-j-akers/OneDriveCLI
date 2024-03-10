@@ -32,14 +32,13 @@ class OneDriveSynch:
             self._drive_id = self._get_setting('drive_id')
             self._root = self._get_setting('root')
             self._cwd = self._get_setting('cwd')
-            # Refresh the download URL cache
-            self.ls()
+            if self._get_setting('debug_on') == 'true':
+                self.debug_on(True)
         else:
             self._initialised = False
             self._drive_id = None
             self._root = None
             self._cwd = None
-            self._download_url_cache = {}
 
         self._logger.debug(f'drive id set to "{self._drive_id}" (if this is "None" then DB is new and Initialise() needs to be run)')
 
@@ -54,7 +53,7 @@ class OneDriveSynch:
             self._create_settings_db()
         cursor.close()
         return
-    
+
     def _create_settings_db(self):
         cursor = self._settings_db.cursor()
         cursor.execute('CREATE TABLE settings (key TEXT, value TEXT, PRIMARY KEY (key))')
@@ -94,6 +93,14 @@ class OneDriveSynch:
 
 # public:
     
+    def debug_on(self, on):
+        if on:
+            logging.getLogger().setLevel(logging.DEBUG)
+            self._upsert_setting('debug_on', 'true')
+        else:
+            logging.getLogger().setLevel(logging.ERROR)
+            self._upsert_setting('debug_on', 'false')
+
     def initialise(self):
         self._logger.debug("initialising ods")
         token = self._token_handler.get_token()
@@ -107,9 +114,10 @@ class OneDriveSynch:
         self._drive_id = json['id']
         self._upsert_setting('drive_id', self._drive_id)
         self._root = f'/drives/{self._drive_id}/root:'
-        self._cwd = '/'
         self._upsert_setting('root', self._root)
+        self._cwd = '/'
         self._upsert_setting('cwd', self._cwd)
+        self._upsert_setting('debug_on','false')
         self._initialised = True
         self._upsert_setting('is_initialised', 'true')
         self._logger.debug('initialisation complete')
@@ -174,7 +182,7 @@ class OneDriveSynch:
             field_lengths['name'] = max(len(item['name']), field_lengths.get('name',0))
             field_lengths['webUrl'] = max(len(item['webUrl']), field_lengths.get('webUrl',0))
 
-        listing = f'{self._root + self._cwd}\n'
+        listing = ''
         for item in items:
             listing += ( 
                          f'{item['type']:<{field_lengths['type']+2}}'
@@ -188,42 +196,42 @@ class OneDriveSynch:
                          f'{item['name']:<{field_lengths['name']+2}}'
                          f'\n'
                        )
+        listing += f'\n{self._root + self._cwd}\n'
         return listing
 
-    def get(self, remote_path, local_path):
-        self._logger.debug(f'attempting download of file {remote_path}')
+    def get(self, remote_filepath, local_path):
+        self._logger.debug(f'attempting download of {remote_filepath} to {local_path}')
 
-        remote_filename = os.path.basename(remote_path)
-        path = self._wrangle_relative_path(self._cwd, os.path.dirname(remote_path))
-        self._logger.debug(f'got filename: {remote_filename} and path {path}')
+        remote_filepart = os.path.basename(remote_filepath)
+        remote_pathpart = os.path.dirname(remote_filepath)
+        self._logger.debug(f'split path into [{remote_pathpart}] / [{remote_filepart}]')
 
-        if local_path == '':
-            local_path = f'./{remote_filename}'
-        if local_path[:-1] == '/':
-            local_path = f'{local_path}{remote_filename}'
+        remote_relative_path = self._cwd if remote_pathpart == '' else self._wrangle_relative_path(self._cwd, remote_pathpart)
+        self._logger.debug(f'got filename: {remote_filepart} and path {remote_relative_path}')
 
-        self._logger.debug(f'local_path is set to: {local_path}')
-
-        url = f'{self._root[:-1]}/{remote_filename}' if path == '/' else f'{self._root}{path}/{remote_filename}'
+        url = f'{self._root}/{remote_filepart}' if remote_relative_path == '/' else f'{self._root}{remote_relative_path}/{remote_filepart}'
         self._logger.debug(f'item url is {url}')
 
         response = self._onedrive_api_get(url)
         json = response.json()
+
         if 'error' in json:
-            print(f'error: {json['error']['code']}: {json['error']['message']}')
+            print(f'error: {json['error']['code']} | {json['error']['message']}')
             return
 
         download_url = json['@microsoft.graph.downloadUrl']
         self._logger.debug(f'download url is: {download_url}')
-        if 'error' in json:
-            return f'error: {json['error']['code']} | {json['error']['message']}'
-        
+
+        file_size = json['size']
+        self._logger.debug(f'filesize is: {file_size}')
+
+        print(f'Downloading {file_size} bytes ({remote_filepart})')
         response = requests.get(download_url)
         if response.status_code != 200:
             print(f'error: could not download file: status code: {response.status_code}')
             return
         
-        open(local_path, 'wb').write(response.content)        
+        open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_filepart}', 'wb').write(response.content)
         self._logger.debug(f'file downloaded to {local_path}')
 
     def put(local_path, remote_path):
