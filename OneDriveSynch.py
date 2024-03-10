@@ -235,8 +235,49 @@ class OneDriveSynch:
         open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_file}', 'wb').write(response.content)
         self._logger.debug(f'file downloaded to {local_path}')
 
-    def put(self, local_path, remote_path):
-        pass
+    def _get_item_id_for_put(self, local_file, remote_path):
+        self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
+
+        url = f'{self._root}/{local_file}' if remote_path == '/' else f'{self._root}{remote_path}/{local_file}'
+        self._logger.debug(f'item url is {url}')
+
+        response = self._onedrive_api_get(url)
+        json = response.json()
+        
+        item_id = ''
+        if 'error' in json:
+            if json['error']['code'] == 'itemNotFound':
+                self._logger.debug('file not found on one-drive, getting id of cwd instead')
+                url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
+                response = self._onedrive_api_get(url)
+                json = response.json()
+                self._dbg_print_json(json)
+                item_id = json['id']
+                self._logger.debug(f'got directory item id {item_id} for upload')
+            else:
+                print(f'error: {json['error']['code']} | {json['error']['message']}')
+                return ''
+        else:
+            item_id = json['id']
+            self._logger.debug(f'file already exists, got item id: {item_id}')
+        return item_id
+
+    def put(self, local_filepath, rel_remote_path):
+        self._logger.debug(f'attempting upload of {local_filepath} to {rel_remote_path}')
+
+        local_file = os.path.basename(local_filepath)
+        local_path = os.path.dirname(local_filepath)
+        self._logger.debug(f'split local filepath into [{local_path}] / [{local_file}]')
+
+        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path)
+        self._logger.debug(f'got upload path {remote_path}')
+    
+        item_id = self._get_item_id_for_put(local_file=local_file, remote_path=remote_path)
+        if item_id == '':
+            return
+
+        print(f'item_id: {item_id}')
+
 
     def cat(self, local_path):
         pass
