@@ -129,6 +129,7 @@ class OneDriveSynch:
     def cd(self, path):
         self._logger.debug(f'attempting to change directory to "{path}"')
         nwd = self._wrangle_relative_path(self._cwd, path)
+        
         # Check path is valid
         root = self._root[:-1] if nwd == '/' else self._root
         response = self._onedrive_api_get(root + nwd)
@@ -202,14 +203,14 @@ class OneDriveSynch:
     def get(self, remote_filepath, local_path):
         self._logger.debug(f'attempting download of {remote_filepath} to {local_path}')
 
-        remote_filepart = os.path.basename(remote_filepath)
-        remote_pathpart = os.path.dirname(remote_filepath)
-        self._logger.debug(f'split path into [{remote_pathpart}] / [{remote_filepart}]')
+        remote_file = os.path.basename(remote_filepath)
+        remote_path = os.path.dirname(remote_filepath)
+        self._logger.debug(f'split path into [{remote_path}] / [{remote_file}]')
 
-        remote_relative_path = self._cwd if remote_pathpart == '' else self._wrangle_relative_path(self._cwd, remote_pathpart)
-        self._logger.debug(f'got filename: {remote_filepart} and path {remote_relative_path}')
+        remote_relative_path = self._cwd if remote_path == '' else self._wrangle_relative_path(self._cwd, remote_path)
+        self._logger.debug(f'got filename: {remote_file} and path {remote_relative_path}')
 
-        url = f'{self._root}/{remote_filepart}' if remote_relative_path == '/' else f'{self._root}{remote_relative_path}/{remote_filepart}'
+        url = f'{self._root}/{remote_file}' if remote_relative_path == '/' else f'{self._root}{remote_relative_path}/{remote_file}'
         self._logger.debug(f'item url is {url}')
 
         response = self._onedrive_api_get(url)
@@ -220,20 +221,22 @@ class OneDriveSynch:
             return
 
         download_url = json['@microsoft.graph.downloadUrl']
-        self._logger.debug(f'download url is: {download_url}')
+        self._logger.debug(f'item download url is: {download_url}')
 
         file_size = json['size']
         self._logger.debug(f'filesize is: {file_size}')
 
-        print(f'Downloading {file_size} bytes ({remote_filepart})')
+        print(f'Downloading {file_size} bytes ({remote_file})')
         response = requests.get(download_url)
         if response.status_code != 200:
             print(f'error: could not download file: status code: {response.status_code}')
             return
         
-        open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_filepart}', 'wb').write(response.content)
+        open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_file}', 'wb').write(response.content)
         self._logger.debug(f'file downloaded to {local_path}')
 
-    def put(local_path, remote_path):
+    def put(self, local_path, remote_path):
         pass
 
+    def cat(self, local_path):
+        pass

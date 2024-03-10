@@ -16,6 +16,7 @@ class TestCD:
 
         # We pretend we've initialised ods
         ods._cwd = '/'
+        ods._root = '/drives/123456789/root:'
 
         ods.cd('/root/path/to/my/current/dir')
         assert ods._cwd == '/root/path/to/my/current/dir'
