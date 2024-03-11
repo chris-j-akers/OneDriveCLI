@@ -13,7 +13,7 @@ class OneDriveSynch:
     ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
     AUTHORITY='https://login.microsoftonline.com/consumers'
-    SCOPES=['Files.Read.All']
+    SCOPES=['Files.ReadWrite.All']
 
 # private:
     
@@ -251,7 +251,9 @@ class OneDriveSynch:
                 url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
                 response = self._onedrive_api_get(url)
                 json = response.json()
-                self._dbg_print_json(json)
+                if 'error' in json:
+                    print(f'error: {json['error']['code']} | {json['error']['message']}')
+                    return ''
                 item_id = json['id']
                 self._logger.debug(f'got directory item id {item_id} for upload')
             else:
@@ -262,21 +264,66 @@ class OneDriveSynch:
             self._logger.debug(f'file already exists, got item id: {item_id}')
         return item_id
 
+    def _get_upload_session_for_put(self, item_id, filename):
+        self._logger.debug(f'getting upload session for item {item_id}')
+
+        url = f'/drives/{self._drive_id}/items/{item_id}:/{filename}:/createUploadSession'
+        self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
+        
+        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
+        
+        json = response.json()
+        if 'error' in response.json():
+            print(f'error: {json['error']['code']} | {json['error']['message']}')
+            return ''
+        return json['uploadUrl']
+
     def put(self, local_filepath, rel_remote_path):
+        # Upload chunk size must be divisible by 327,680 according to MSFT docs
+        chunk_size = 10485760
+
         self._logger.debug(f'attempting upload of {local_filepath} to {rel_remote_path}')
 
         local_file = os.path.basename(local_filepath)
-        local_path = os.path.dirname(local_filepath)
-        self._logger.debug(f'split local filepath into [{local_path}] / [{local_file}]')
 
         remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path)
-        self._logger.debug(f'got upload path {remote_path}')
-    
+            
         item_id = self._get_item_id_for_put(local_file=local_file, remote_path=remote_path)
         if item_id == '':
             return
+        
+        upload_url = self._get_upload_session_for_put(item_id, local_file)
 
-        print(f'item_id: {item_id}')
+        if upload_url == '':
+            return
+
+        self._logger.debug(f'Upload URL for first chunk is {upload_url}')
+
+        # Content-Length: 26
+        # Content-Range: bytes 0-25/128
+
+        file_size = os.path.getsize(local_filepath)
+
+        chunk_count = 0
+        with open(local_filepath, 'rb') as upload_file:
+            while (bytes_read := upload_file.read(chunk_size)):
+                chunk_count += 1
+                self._logger.debug(f'Uploading chunk {len(bytes_read)} {chunk_count}')
+                response = requests.put(upload_url, bytes_read, headers={"Accept": "application/json", "Content-Length": f"{file_size}", "Content-Range": ""})
+                self._dbg_print_json(response.json())
+
+        final_status_code = response.status_code
+        if final_status_code not in [201, 200]:
+            print(f'upload seems to be complete, but final status code was {final_status_code} with {response.json()}, please check the file')
+
+        # Clean up the old urls
+        response = requests.delete(upload_url)
+        self._logger.debug(response.status_code)
+
+ 
+
+
+
 
 
     def cat(self, local_path):
