@@ -129,13 +129,11 @@ class OneDriveSynch:
     def cd(self, path):
         self._logger.debug(f'attempting to change directory to "{path}"')
         nwd = self._wrangle_relative_path(self._cwd, path)
-        
         # Check path is valid
         root = self._root[:-1] if nwd == '/' else self._root
         response = self._onedrive_api_get(root + nwd)
         if 'error' in response.json():
             return f'error: invaid path ({self._root + nwd})'
-
         self._cwd = nwd
         self._upsert_setting('cwd', self._cwd)
         return self._root + self._cwd
@@ -151,7 +149,6 @@ class OneDriveSynch:
         json = response.json()
         if 'error' in json:
             return f'error: {json['error']['code']} | {json['error']['message']}'
-
         # Finangling required to get nice, justified output
         items = []
         field_lengths = {}
@@ -202,48 +199,35 @@ class OneDriveSynch:
 
     def get(self, remote_filepath, local_path):
         self._logger.debug(f'attempting download of {remote_filepath} to {local_path}')
-
         remote_file = os.path.basename(remote_filepath)
         remote_path = os.path.dirname(remote_filepath)
-        self._logger.debug(f'split path into [{remote_path}] / [{remote_file}]')
-
         remote_relative_path = self._cwd if remote_path == '' else self._wrangle_relative_path(self._cwd, remote_path)
         self._logger.debug(f'got filename: {remote_file} and path {remote_relative_path}')
-
         url = f'{self._root}/{remote_file}' if remote_relative_path == '/' else f'{self._root}{remote_relative_path}/{remote_file}'
         self._logger.debug(f'item url is {url}')
-
         response = self._onedrive_api_get(url)
         json = response.json()
-
         if 'error' in json:
             print(f'error: {json['error']['code']} | {json['error']['message']}')
             return
-
         download_url = json['@microsoft.graph.downloadUrl']
         self._logger.debug(f'item download url is: {download_url}')
-
         file_size = json['size']
         self._logger.debug(f'filesize is: {file_size}')
-
         print(f'Downloading {file_size} bytes ({remote_file})')
         response = requests.get(download_url)
         if response.status_code != 200:
             print(f'error: could not download file: status code: {response.status_code}')
             return
-        
         open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_file}', 'wb').write(response.content)
         self._logger.debug(f'file downloaded to {local_path}')
 
     def _get_item_id_for_put(self, local_file, remote_path):
         self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
-
         url = f'{self._root}/{local_file}' if remote_path == '/' else f'{self._root}{remote_path}/{local_file}'
         self._logger.debug(f'item url is {url}')
-
         response = self._onedrive_api_get(url)
         json = response.json()
-        
         item_id = ''
         if 'error' in json:
             if json['error']['code'] == 'itemNotFound':
@@ -266,12 +250,9 @@ class OneDriveSynch:
 
     def _get_upload_session_for_put(self, item_id, filename):
         self._logger.debug(f'getting upload session for item {item_id}')
-
         url = f'/drives/{self._drive_id}/items/{item_id}:/{filename}:/createUploadSession'
         self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
-        
         response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
-        
         json = response.json()
         if 'error' in response.json():
             print(f'error: {json['error']['code']} | {json['error']['message']}')
@@ -281,29 +262,17 @@ class OneDriveSynch:
     def put(self, local_filepath, rel_remote_path):
         # Upload chunk size must be divisible by 327,680 according to MSFT docs
         chunk_size = 10485760
-
         self._logger.debug(f'attempting upload of {local_filepath} to {rel_remote_path}')
-
         local_file = os.path.basename(local_filepath)
-
-        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path)
-            
+        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path) 
         item_id = self._get_item_id_for_put(local_file=local_file, remote_path=remote_path)
         if item_id == '':
             return
-        
         upload_url = self._get_upload_session_for_put(item_id, local_file)
-
         if upload_url == '':
             return
-
-        self._logger.debug(f'Upload URL for first chunk is {upload_url}')
-
-        # Content-Length: 26
-        # Content-Range: bytes 0-25/128
-
+        self._logger.debug(f'upload URL for first chunk is {upload_url}')
         file_size = os.path.getsize(local_filepath)
-
         chunk_count = 0
         with open(local_filepath, 'rb') as upload_file:
             while (bytes_read := upload_file.read(chunk_size)):
@@ -311,20 +280,12 @@ class OneDriveSynch:
                 self._logger.debug(f'Uploading chunk {len(bytes_read)} {chunk_count}')
                 response = requests.put(upload_url, bytes_read, headers={"Accept": "application/json", "Content-Length": f"{file_size}", "Content-Range": ""})
                 self._dbg_print_json(response.json())
-
         final_status_code = response.status_code
         if final_status_code not in [201, 200]:
             print(f'upload seems to be complete, but final status code was {final_status_code} with {response.json()}, please check the file')
-
-        # Clean up the old urls
+        # Clean up
         response = requests.delete(upload_url)
         self._logger.debug(response.status_code)
-
- 
-
-
-
-
 
     def cat(self, local_path):
         pass
