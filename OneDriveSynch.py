@@ -90,6 +90,44 @@ class OneDriveSynch:
         self._logger.debug(f'sending get request to {url}')
         response = requests.get(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
         return response
+    
+    def _get_item_id_for_put(self, local_file, remote_path):
+        self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
+        url = f'{self._root}/{local_file}' if remote_path == '/' else f'{self._root}{remote_path}/{local_file}'
+        self._logger.debug(f'item url is {url}')
+        response = self._onedrive_api_get(url)
+        item_id = ''
+        if 'error' in (json := response.json()):
+            if json['error']['code'] == 'itemNotFound':
+                self._logger.debug('file not found on one-drive, getting id of cwd instead')
+                url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
+                response = self._onedrive_api_get(url)
+                if 'error' in (json := response.json()):
+                    print(f'error: {json['error']['code']} | {json['error']['message']}')
+                    return ''
+                item_id = json['id']
+                self._logger.debug(f'got directory item id {item_id} for upload')
+            else:
+                print(f'error: {json['error']['code']} | {json['error']['message']}')
+                return ''
+        else:
+            item_id = json['id']
+            self._logger.debug(f'file already exists, got item id: {item_id}')
+        return item_id
+
+    def _get_upload_session_for_put(self, local_filepath, rel_remote_path):
+        self._logger.debug(f'getting upload session for upload of {local_filepath} to {rel_remote_path}')
+        local_file = os.path.basename(local_filepath)
+        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path) 
+        if (item_id := self._get_item_id_for_put(local_file=local_file, remote_path=remote_path)) == '':
+            return ''
+        url = f'/drives/{self._drive_id}/items/{item_id}:/{local_file}:/createUploadSession'
+        self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
+        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
+        if 'error' in (json := response.json()):
+            print(f'error: {json['error']['code']} | {json['error']['message']}')
+            return ''
+        return json['uploadUrl']
 
 # public:
     
@@ -200,7 +238,6 @@ class OneDriveSynch:
         remote_file = os.path.basename(rel_remote_filepath)
         rel_remote_path = os.path.dirname(rel_remote_filepath)
         abs_remote_path = self._cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path)
-        self._logger.debug(f'got filename: {remote_file} and path {abs_remote_path}')
         url = f'{self._root}/{remote_file}' if abs_remote_path == '/' else f'{self._root}{abs_remote_path}/{remote_file}'
         self._logger.debug(f'item url is {url}')
         response = self._onedrive_api_get(url)
@@ -217,44 +254,6 @@ class OneDriveSynch:
             return
         open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_file}', 'wb').write(response.content)
         self._logger.debug(f'file downloaded to {local_path}')
-
-    def _get_item_id_for_put(self, local_file, remote_path):
-        self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
-        url = f'{self._root}/{local_file}' if remote_path == '/' else f'{self._root}{remote_path}/{local_file}'
-        self._logger.debug(f'item url is {url}')
-        response = self._onedrive_api_get(url)
-        item_id = ''
-        if 'error' in (json := response.json()):
-            if json['error']['code'] == 'itemNotFound':
-                self._logger.debug('file not found on one-drive, getting id of cwd instead')
-                url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
-                response = self._onedrive_api_get(url)
-                if 'error' in (json := response.json()):
-                    print(f'error: {json['error']['code']} | {json['error']['message']}')
-                    return ''
-                item_id = json['id']
-                self._logger.debug(f'got directory item id {item_id} for upload')
-            else:
-                print(f'error: {json['error']['code']} | {json['error']['message']}')
-                return ''
-        else:
-            item_id = json['id']
-            self._logger.debug(f'file already exists, got item id: {item_id}')
-        return item_id
-
-    def _get_upload_session_for_put(self, local_filepath, rel_remote_path):
-        self._logger.debug(f'getting upload session for upload of {local_filepath} to {rel_remote_path}')
-        local_file = os.path.basename(local_filepath)
-        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path) 
-        if (item_id := self._get_item_id_for_put(local_file=local_file, remote_path=remote_path)) == '':
-            return
-        url = f'/drives/{self._drive_id}/items/{item_id}:/{local_file}:/createUploadSession'
-        self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
-        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
-        if 'error' in (json := response.json()):
-            print(f'error: {json['error']['code']} | {json['error']['message']}')
-            return ''
-        return json['uploadUrl']
 
     def put(self, local_filepath, rel_remote_path):
         chunk_size = 10485760 # Must be divisible by 327,680, according to MSFT
@@ -285,6 +284,8 @@ class OneDriveSynch:
         response = requests.delete(upload_url)
         self._logger.debug(f'delete upload url response: {response.status_code}')
 
+    def rm(self):
+        pass
 
     def cat(self, local_path):
         pass
