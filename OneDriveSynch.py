@@ -100,12 +100,8 @@ class OneDriveSynch:
             return True
         return False
 
-    def _get_item_id_for_put(self, local_file, remote_path):
+    def _get_dir_id_for_put(self, local_file, remote_path):
         self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
-        if self._put_item_exists(local_file=local_file, remote_path=remote_path):
-            self._logger.debug('file found on one-drive, checking with user')
-            if input(f'[{local_file}] already exists on OneDrive in [{remote_path}], do you want to replace? (Y/N)').upper() == 'N':
-                return ''
         url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
         response = self._onedrive_api_get(url)
         if 'error' in (json := response.json()):
@@ -117,9 +113,13 @@ class OneDriveSynch:
         self._logger.debug(f'getting upload session for upload of {local_filepath} to {rel_remote_path}')
         local_file = os.path.basename(local_filepath)
         remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path) 
-        if (item_id := self._get_item_id_for_put(local_file=local_file, remote_path=remote_path)) == '':
+        if self._put_item_exists(local_file=local_file, remote_path=remote_path):
+            self._logger.debug('file found on one-drive, checking with user')
+            if input(f'[{local_file}] already exists on OneDrive in [{remote_path}], do you want to replace? (Y/N)').upper() == 'N':
+                return ''
+        if (dir_id := self._get_dir_id_for_put(local_file=local_file, remote_path=remote_path)) == '':
             return ''
-        url = f'/drives/{self._drive_id}/items/{item_id}:/{local_file}:/createUploadSession'
+        url = f'/drives/{self._drive_id}/items/{dir_id}:/{local_file}:/createUploadSession'
         self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
         headers = self._get_default_api_headers(self._token_handler.get_token())
         headers['Content-Type'] = 'application/json'
