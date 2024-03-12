@@ -257,25 +257,34 @@ class OneDriveSynch:
         return json['uploadUrl']
 
     def put(self, local_filepath, rel_remote_path):
-        # Upload chunk size must be divisible by 327,680 according to MSFT docs
-        chunk_size = 10485760
+        chunk_size = 10485760 # Must be divisible by 327,680, according to MSFT
         if (upload_url := self._get_upload_session_for_put(local_filepath=local_filepath, rel_remote_path=rel_remote_path)) == '':
             return
-        self._logger.debug(f'upload URL for first chunk is {upload_url}')
+        self._logger.debug(f'upload URL is {upload_url}')
         file_size = os.path.getsize(local_filepath)
-        chunk_count = 0
+        print(f'Uploading [{local_filepath}] to [{rel_remote_path}] ({file_size} bytes)', end='', flush=True)
+        chunk_start = 0
+        chunk_end = 0
         with open(local_filepath, 'rb') as upload_file:
             while (bytes_read := upload_file.read(chunk_size)):
-                chunk_count += 1
-                self._logger.debug(f'Uploading chunk {len(bytes_read)} {chunk_count}')
-                response = requests.put(upload_url, bytes_read, headers={"Accept": "application/json", "Content-Length": f"{file_size}", "Content-Range": ""})
-                self._dbg_print_json(response.json())
-        final_status_code = response.status_code
-        if final_status_code not in [201, 200]:
-            print(f'upload seems to be complete, but final status code was {final_status_code} with {response.json()}, please check the file')
+                self._logger.debug(f'bytes_read = {len(bytes_read)}')
+                chunk_end = upload_file.tell()
+                self._logger.debug(f'Content-Range: bytes {chunk_start}-{chunk_end-1}/{file_size}')
+                if (response := requests.put(upload_url, 
+                                             bytes_read, 
+                                             headers={"Accept": "application/json", 
+                                                      "Content-Length": f"{file_size}", 
+                                                      "Content-Range": f"bytes {chunk_start}-{chunk_end-1}/{file_size}"})).status_code not in [202, 201, 200]:
+                    print(f'\nerror uploading file {local_filepath} with HTTP status code as {response.status_code} and response as {response.text}, partial upload you may need to delete manually')
+                    self._logger.debug(f'error uploading at chunk start: {chunk_start}, chunk_end: {chunk_end}')
+                    upload_file.close()
+                    return
+                print('.', end='', flush=True)
+                chunk_start = upload_file.tell()
         # Clean up
         response = requests.delete(upload_url)
-        self._logger.debug(response.status_code)
+        self._logger.debug(f'delete upload url response: {response.status_code}')
+
 
     def cat(self, local_path):
         pass
