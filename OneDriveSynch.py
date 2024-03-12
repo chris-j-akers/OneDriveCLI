@@ -13,7 +13,7 @@ class OneDriveSynch:
     ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
     AUTHORITY='https://login.microsoftonline.com/consumers'
-    SCOPES=['Files.ReadWrite.All']
+    SCOPES=['Files.ReadWrite.All', 'Files.ReadWrite']
 
 # private:
     
@@ -83,37 +83,35 @@ class OneDriveSynch:
             old.pop() if path == '..' else old.append(path)
         return '/' if old == [] else ('/' + '/'.join(old))
 
-    def _get_api_headers(self, token):
+    def _get_default_api_headers(self, token):
         return {"Authorization": f"bearer {token}", "Accept": "application/json"}
     
     def _onedrive_api_get(self, url):
         self._logger.debug(f'sending get request to {url}')
-        response = requests.get(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
+        response = requests.get(self.ONEDRIVE_ENDPOINT + url, headers=self._get_default_api_headers(self._token_handler.get_token()))
         return response
     
-    def _get_item_id_for_put(self, local_file, remote_path):
+    def _put_item_exists(self, local_file, remote_path):
         self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
         url = f'{self._root}/{local_file}' if remote_path == '/' else f'{self._root}{remote_path}/{local_file}'
         self._logger.debug(f'item url is {url}')
         response = self._onedrive_api_get(url)
-        item_id = ''
-        if 'error' in (json := response.json()):
-            if json['error']['code'] == 'itemNotFound':
-                self._logger.debug('file not found on one-drive, getting id of cwd instead')
-                url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
-                response = self._onedrive_api_get(url)
-                if 'error' in (json := response.json()):
-                    print(f'error: {json['error']['code']} | {json['error']['message']}')
-                    return ''
-                item_id = json['id']
-                self._logger.debug(f'got directory item id {item_id} for upload')
-            else:
-                print(f'error: {json['error']['code']} | {json['error']['message']}')
+        if not 'error' in (response.json()):
+            return True
+        return False
+
+    def _get_item_id_for_put(self, local_file, remote_path):
+        self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
+        if self._put_item_exists(local_file=local_file, remote_path=remote_path):
+            self._logger.debug('file found on one-drive, checking with user')
+            if input(f'[{local_file}] already exists on OneDrive in [{remote_path}], do you want to replace? (Y/N)').upper() == 'N':
                 return ''
-        else:
-            item_id = json['id']
-            self._logger.debug(f'file already exists, got item id: {item_id}')
-        return item_id
+        url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
+        response = self._onedrive_api_get(url)
+        if 'error' in (json := response.json()):
+            print(f'error: {json['error']['code']} | {json['error']['message']}')
+            return ''
+        return json['id']
 
     def _get_upload_session_for_put(self, local_filepath, rel_remote_path):
         self._logger.debug(f'getting upload session for upload of {local_filepath} to {rel_remote_path}')
@@ -123,7 +121,10 @@ class OneDriveSynch:
             return ''
         url = f'/drives/{self._drive_id}/items/{item_id}:/{local_file}:/createUploadSession'
         self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
-        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=self._get_api_headers(self._token_handler.get_token()))
+        headers = self._get_default_api_headers(self._token_handler.get_token())
+        headers['Content-Type'] = 'application/json'
+        self._logger.debug(f'headers = {headers}')
+        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=headers, json='{ "item": { "@microsoft.graph.conflictBehavior": "replace" } }')
         if 'error' in (json := response.json()):
             print(f'error: {json['error']['code']} | {json['error']['message']}')
             return ''
@@ -142,7 +143,7 @@ class OneDriveSynch:
     def initialise(self):
         self._logger.debug("initialising ods")
         token = self._token_handler.get_token()
-        response = requests.get(f'{self.ONEDRIVE_ENDPOINT}/me/drive', headers=self._get_api_headers(token))
+        response = requests.get(f'{self.ONEDRIVE_ENDPOINT}/me/drive', headers=self._get_default_api_headers(token))
         if 'id' not in (json := response.json()):
             self._logger.error('could not get drive id from msft graph response')
             print("error! no drive id in response from msft graph, cannot initialise ods")
@@ -261,7 +262,7 @@ class OneDriveSynch:
             return
         self._logger.debug(f'upload URL is {upload_url}')
         file_size = os.path.getsize(local_filepath)
-        print(f'Uploading [{local_filepath}] to [{rel_remote_path}] ({file_size} bytes)', end='', flush=True)
+        print(f'Uploading [{local_filepath}] to [{rel_remote_path}] ({file_size} bytes)',flush=True)
         chunk_start = 0
         chunk_end = 0
         with open(local_filepath, 'rb') as upload_file:
@@ -280,6 +281,7 @@ class OneDriveSynch:
                     return
                 print('.', end='', flush=True)
                 chunk_start = upload_file.tell()
+        print('Done')
         # Clean up
         response = requests.delete(upload_url)
         self._logger.debug(f'delete upload url response: {response.status_code}')
