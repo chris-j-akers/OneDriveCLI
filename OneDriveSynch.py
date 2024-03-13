@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 import requests
-import json
+import json as jsonlib
 import os
 from datetime import datetime
 from MSALATPersistence import MSALTokenHandler as TokenHandler
@@ -18,7 +18,7 @@ class OneDriveSynch:
 # private:
     
     def _dbg_print_json(self, json_data):
-        json_formatted_str = json.dumps(json_data, indent=2)
+        json_formatted_str = jsonlib.dumps(json_data, indent=2)
         print(json_formatted_str)
 
     def __init__(self, settings_db='./settings.db') -> None:
@@ -147,6 +147,20 @@ class OneDriveSynch:
         response = requests.delete(upload_url) # Clean up
         self._logger.debug(f'delete upload url response: {response.status_code}')
 
+    def _download(self, url, filename, destination):
+        chunk_size = 10485760
+        print(f'Downloading [{filename}] to [{destination}]', flush=True)
+        if (response := requests.get(url, stream=True)).status_code != 200:
+            print(f'error: could not download file: status code: {response.status_code}')
+            return
+        with open(destination if not os.path.isdir(destination) else f'{destination}/{filename}', 'wb') as destination_file:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                print('.', end='', flush=True)
+                destination_file.write(chunk)
+        print('Done')
+        self._logger.debug(f'file downloaded to {destination}')
+        pass
+
 # public:
     
     def debug_on(self, on):
@@ -251,9 +265,6 @@ class OneDriveSynch:
         listing += f'\n{self._root + self._cwd}\n'
         return listing
 
-    def _download(self, remote_filepath):
-        pass
-
     def get(self, rel_remote_filepath, local_path):
         self._logger.debug(f'attempting download of {rel_remote_filepath} to {local_path}')
         remote_file = os.path.basename(rel_remote_filepath)
@@ -264,16 +275,8 @@ class OneDriveSynch:
         if 'error' in (json := response.json()):
             print(f'error: {json['error']['code']} | {json['error']['message']}')
             return
-        download_url = json['@microsoft.graph.downloadUrl']
-        self._logger.debug(f'item download url is: {download_url}')
-        file_size = json['size']
-        self._logger.debug(f'filesize is: {file_size}')
-        print(f'Downloading {file_size} bytes ({remote_file})')
-        if (response := requests.get(download_url)).status_code != 200:
-            print(f'error: could not download file: status code: {response.status_code}')
-            return
-        open(local_path if not os.path.isdir(local_path) else f'{local_path}/{remote_file}', 'wb').write(response.content)
-        self._logger.debug(f'file downloaded to {local_path}')
+        self._download(json['@microsoft.graph.downloadUrl'], remote_file, local_path)
+
 
     def put(self, local_filepath, rel_remote_path, force=False):
         local_file = os.path.basename(local_filepath)
