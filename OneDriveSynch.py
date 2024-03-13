@@ -112,11 +112,11 @@ class OneDriveSynch:
         if (dir_id := self._get_onedrive_dir_id(remote_path=remote_path)) == '':
             return ''
         url = f'/drives/{self._drive_id}/items/{dir_id}:/{local_file}:/createUploadSession'
-        self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
+        self._logger.debug(f'using url: {url}')
         headers = self._get_default_api_headers(self._token_handler.get_token())
         headers['Content-Type'] = 'application/json'
         self._logger.debug(f'headers = {headers}')
-        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=headers, json='{ "item": { "@microsoft.graph.conflictBehavior": "replace" } }')
+        response = requests.post(url, headers=headers, json='{ "item": { "@microsoft.graph.conflictBehavior": "replace" } }')
         if 'error' in (json := response.json()):
             print(f'error: {json['error']['code']} | {json['error']['message']}')
             return ''
@@ -174,6 +174,7 @@ class OneDriveSynch:
     def initialise(self):
         self._logger.debug("initialising ods")
         token = self._token_handler.get_token()
+        response = self._onedrive_api_get('/me/drive')
         response = requests.get(f'{self.ONEDRIVE_ENDPOINT}/me/drive', headers=self._get_default_api_headers(token))
         if 'id' not in (json := response.json()):
             self._logger.error('could not get drive id from msft graph response')
