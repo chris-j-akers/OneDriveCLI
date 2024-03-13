@@ -89,7 +89,7 @@ class OneDriveSynch:
         response = requests.get(self.ONEDRIVE_ENDPOINT + url, headers=self._get_default_api_headers(self._token_handler.get_token()))
         return response
     
-    def _get_dir_id(self, remote_path):
+    def _get_onedrive_dir_id(self, remote_path):
         self._logger.debug(f'trying to get item id for "{remote_path}"')
         url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
         response = self._onedrive_api_get(url)
@@ -109,7 +109,7 @@ class OneDriveSynch:
 
     def _put_get_upload_session(self, local_file, remote_path):
         self._logger.debug(f'getting upload session for upload of {local_file} to {remote_path}')
-        if (dir_id := self._get_dir_id(remote_path=remote_path)) == '':
+        if (dir_id := self._get_onedrive_dir_id(remote_path=remote_path)) == '':
             return ''
         url = f'/drives/{self._drive_id}/items/{dir_id}:/{local_file}:/createUploadSession'
         self._logger.debug(f'using url: {self.ONEDRIVE_ENDPOINT + url}')
@@ -277,7 +277,6 @@ class OneDriveSynch:
             return
         self._download(json['@microsoft.graph.downloadUrl'], remote_file, local_path)
 
-
     def put(self, local_filepath, rel_remote_path, force=False):
         local_file = os.path.basename(local_filepath)
         remote_path = self.cwd if rel_remote_path == '' else self._get_absolute_path(self._cwd, rel_remote_path) 
@@ -289,7 +288,7 @@ class OneDriveSynch:
             return
         self._put_upload(local_filepath=local_filepath, upload_url=upload_url)
         
-    def rm(self):
+    def rm(self, rel_remote_path, force=False):
         pass
 
     def cat(self, local_path):
