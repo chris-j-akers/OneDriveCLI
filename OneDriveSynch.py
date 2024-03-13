@@ -109,14 +109,8 @@ class OneDriveSynch:
             return ''
         return json['id']
 
-    def _get_upload_session_for_put(self, local_filepath, rel_remote_path):
-        self._logger.debug(f'getting upload session for upload of {local_filepath} to {rel_remote_path}')
-        local_file = os.path.basename(local_filepath)
-        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path) 
-        if self._put_item_exists(local_file=local_file, remote_path=remote_path):
-            self._logger.debug('file found on one-drive, checking with user')
-            if input(f'[{local_file}] already exists on OneDrive in [{remote_path}], do you want to replace? (Y/N)').upper() == 'N':
-                return ''
+    def _get_upload_session_for_put(self, local_file, remote_path):
+        self._logger.debug(f'getting upload session for upload of {local_file} to {remote_path}')
         if (dir_id := self._get_dir_id_for_put(local_file=local_file, remote_path=remote_path)) == '':
             return ''
         url = f'/drives/{self._drive_id}/items/{dir_id}:/{local_file}:/createUploadSession'
@@ -129,6 +123,33 @@ class OneDriveSynch:
             print(f'error: {json['error']['code']} | {json['error']['message']}')
             return ''
         return json['uploadUrl']
+    
+    def _put_upload(self, local_filepath, upload_url):
+        chunk_size = 10485760 # Must be divisible by 327,680, according to MSFT
+        file_size = os.path.getsize(local_filepath)
+        print(f'Uploading [{local_filepath}] ({file_size} bytes)',flush=True)
+        chunk_start = 0
+        chunk_end = 0
+        with open(local_filepath, 'rb') as upload_file:
+            while (bytes_read := upload_file.read(chunk_size)):
+                self._logger.debug(f'bytes_read = {len(bytes_read)}')
+                chunk_end = upload_file.tell()
+                self._logger.debug(f'Content-Range: bytes {chunk_start}-{chunk_end-1}/{file_size}')
+                if (response := requests.put(upload_url, 
+                                            bytes_read, 
+                                            headers={"Accept": "application/json", 
+                                                    "Content-Length": f"{file_size}", 
+                                                    "Content-Range": f"bytes {chunk_start}-{chunk_end-1}/{file_size}"})).status_code not in [202, 201, 200]:
+                    print(f'\nerror uploading file {local_filepath} with HTTP status code as {response.status_code} and response as {response.text}, partial upload you may need to delete manually')
+                    self._logger.debug(f'error uploading at chunk start: {chunk_start}, chunk_end: {chunk_end}')
+                    upload_file.close()
+                    return
+                print('.', end='', flush=True)
+                chunk_start = upload_file.tell()
+        print('Done')
+        # Clean up
+        response = requests.delete(upload_url)
+        self._logger.debug(f'delete upload url response: {response.status_code}')
 
 # public:
     
@@ -257,35 +278,16 @@ class OneDriveSynch:
         self._logger.debug(f'file downloaded to {local_path}')
 
     def put(self, local_filepath, rel_remote_path):
-        chunk_size = 10485760 # Must be divisible by 327,680, according to MSFT
-        if (upload_url := self._get_upload_session_for_put(local_filepath=local_filepath, rel_remote_path=rel_remote_path)) == '':
+        local_file = os.path.basename(local_filepath)
+        remote_path = self.cwd if rel_remote_path == '' else self._wrangle_relative_path(self._cwd, rel_remote_path) 
+        if self._put_item_exists(local_file=local_file, remote_path=remote_path):
+            self._logger.debug('file found on one-drive, checking with user')
+            if input(f'[{local_file}] already exists on OneDrive in [{remote_path}], do you want to replace? (Y/N)').upper() == 'N':
+                return ''
+        if (upload_url := self._get_upload_session_for_put(local_file=local_file, remote_path=remote_path)) == '':
             return
-        self._logger.debug(f'upload URL is {upload_url}')
-        file_size = os.path.getsize(local_filepath)
-        print(f'Uploading [{local_filepath}] to [{rel_remote_path}] ({file_size} bytes)',flush=True)
-        chunk_start = 0
-        chunk_end = 0
-        with open(local_filepath, 'rb') as upload_file:
-            while (bytes_read := upload_file.read(chunk_size)):
-                self._logger.debug(f'bytes_read = {len(bytes_read)}')
-                chunk_end = upload_file.tell()
-                self._logger.debug(f'Content-Range: bytes {chunk_start}-{chunk_end-1}/{file_size}')
-                if (response := requests.put(upload_url, 
-                                             bytes_read, 
-                                             headers={"Accept": "application/json", 
-                                                      "Content-Length": f"{file_size}", 
-                                                      "Content-Range": f"bytes {chunk_start}-{chunk_end-1}/{file_size}"})).status_code not in [202, 201, 200]:
-                    print(f'\nerror uploading file {local_filepath} with HTTP status code as {response.status_code} and response as {response.text}, partial upload you may need to delete manually')
-                    self._logger.debug(f'error uploading at chunk start: {chunk_start}, chunk_end: {chunk_end}')
-                    upload_file.close()
-                    return
-                print('.', end='', flush=True)
-                chunk_start = upload_file.tell()
-        print('Done')
-        # Clean up
-        response = requests.delete(upload_url)
-        self._logger.debug(f'delete upload url response: {response.status_code}')
-
+        self._put_upload(local_filepath=local_filepath, upload_url=upload_url)
+        
     def rm(self):
         pass
 
