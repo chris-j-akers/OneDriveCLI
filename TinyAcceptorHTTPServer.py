@@ -1,7 +1,5 @@
 from urllib.parse import parse_qs
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-from time import sleep
-from functools import partial
         
 class TinyAcceptorHTTPServer(HTTPServer):
     """
@@ -85,9 +83,17 @@ class TinyAcceptorHTTPServer(HTTPServer):
         self._state = state
 
     def wait_for_authorisation_code(self, timeout=300):
+        """
+        We wait for just one request before the server closes. This request 
+        should always MSFT sending the authorisation code or an error.
+
+        The default timeout is 300 seconds, or five minutes. It's tempting to 
+        cut this to 30 seconds, or so, but you need to leave time for the
+        user to enter their credentials and accept the scopes when MSFT presents
+        them.
+        """
         self.timeout = timeout
         with self:
-            # We're only expecting one request
             self.handle_request()
 
     def handle_timeout(self):

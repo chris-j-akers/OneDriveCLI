@@ -5,9 +5,8 @@ import logging
 import uuid
 import json as jsonlib
 import urllib
-import time
 import webbrowser
-from threading import Thread, current_thread
+
 
 
 
@@ -103,14 +102,8 @@ class MSALTokenHandler:
         url = address + urllib.parse.urlencode(params)
         webbrowser.open(url)
 
-        # We block with a timeout (default is five minutes - you need to give
-        # people long enough to enter credentials and accept the Scopes)
-        http_server.wait_for_authorisation_code()
-        code = http_server.get_auth_code()
-        if code == '':
-            return ''
-        print(f'Got code: {code}')
-
+        http_server.wait_for_authorisation_code(timeout=300)
+        return http_server.get_auth_code()
 
     def get_token(self):
         """
