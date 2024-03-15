@@ -24,10 +24,10 @@ class TinyAcceptorHTTPServer(HTTPServer):
         * We wait for one request and one request only, then close the server
         * We check state value received in the result matches the one we sent
           with the original authorisation request (see MSFT docs)
-        * After a timeout (default 20 seconds) we close the server with an error
-
-    The request comes locally from the browser, not from public internet, so
-    ensure firewalls/windows defender etc are configured appropriately.
+        * After a timeout (5 minutes) we close the server with an error
+        * The request is expected locally from the browser, not from public 
+          internet, so ensure firewalls/windows defender etc are configured 
+          appropriately.
     
     Ultimately, up to you whether to use it or not.
     """
