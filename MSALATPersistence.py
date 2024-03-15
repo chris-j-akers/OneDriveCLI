@@ -6,15 +6,14 @@ import uuid
 import json as jsonlib
 import urllib
 import webbrowser
-
-
-
+import requests
 
 logger = logging.getLogger(__name__)
 
 class MSALTokenHandler:
     
-    ONEDRIVE_AUTHORISE_URL=f'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?'
+    ONEDRIVE_AUTHORISE_URL='https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?'
+    ONEDRIVE_TOKEN_SERVER_URL='https://login.live.com/oauth20_token.srf'
 
     def _dbg_print_json(self, json_data):
         json_formatted_str = jsonlib.dumps(json_data, indent=2)
@@ -89,7 +88,6 @@ class MSALTokenHandler:
         http_server = TinyAcceptorHTTPServer()
         state = str(uuid.uuid4())
         http_server.set_expected_state(state)
-        address = self.ONEDRIVE_AUTHORISE_URL
         params = {
                     "client_id": self._client_id,
                     "response_type": "code",
@@ -98,12 +96,36 @@ class MSALTokenHandler:
                     "scope": self._scopes,
                     "state": state
                 }
-        
-        url = address + urllib.parse.urlencode(params)
+        url = self.ONEDRIVE_AUTHORISE_URL + urllib.parse.urlencode(params)
         webbrowser.open(url)
-
         http_server.wait_for_authorisation_code(timeout=300)
-        return http_server.get_auth_code()
+        auth_code = http_server.get_auth_code()
+        if auth_code == '':
+            return ''
+        params = {
+                    "client_id": self._client_id,
+                    "redirect_uri": f"http://localhost:{http_server.get_port()}",
+                    "code": auth_code,
+                    "grant_type": "authorization_code"   
+                 }
+        response = requests.post(self.ONEDRIVE_TOKEN_SERVER_URL, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=urllib.parse.urlencode(params))
+        # Check for 'error' in response
+        
+        # Set in cache
+        # Set timeout in cache
+        # Return token
+        self._dbg_print_json(response.json())
+ 
+
+    def get_token2(self):
+        self.get_token_interactive()
+
+#         return {"Authorization": f"bearer {token}", "Accept": "application/json"}
+#         POST https://login.live.com/oauth20_token.srf
+# Content-Type: application/x-www-form-urlencoded
+
+# client_id={client_id}&redirect_uri={redirect_uri}&client_secret={client_secret}
+# &code={code}&grant_type=authorization_code
 
     def get_token(self):
         """

@@ -3,11 +3,11 @@ from MSALATPersistence import MSALTokenHandler
 ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
 CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
 AUTHORITY='https://login.microsoftonline.com/consumers'
-SCOPES=['Files.ReadWrite.All', 'Files.ReadWrite']
+SCOPES=['Files.ReadWrite.All', 'Files.ReadWrite', 'offline_access']
 
 
 th = MSALTokenHandler('my_test_app', CLIENT_ID, AUTHORITY, ' '.join(SCOPES), "./cja_settings.db")
-th.get_token_interactive()
+th.get_token2()
 
 
 # def _tiny_accept_server():
