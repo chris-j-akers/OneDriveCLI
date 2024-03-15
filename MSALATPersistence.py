@@ -1,5 +1,5 @@
 from msal import PublicClientApplication
-from TinyAcceptorServer import TinyAcceptorServer
+from TinyAcceptorHTTPServer import TinyAcceptorHTTPServer
 import sqlite3
 import logging
 import uuid
@@ -87,14 +87,14 @@ class MSALTokenHandler:
         cursor.close()
 
     def get_token2(self):
-        server = TinyAcceptorServer()
+        http_server = TinyAcceptorHTTPServer()
         state = str(uuid.uuid4())
-        server.set_expected_state(state)
+        http_server.set_expected_state(state)
         address = self.ONEDRIVE_AUTHORISE_URL
         params = {
                     "client_id": self._client_id,
                     "response_type": "code",
-                    "redirect_uri": f"http://localhost:{server.get_port()}",
+                    "redirect_uri": f"http://localhost:{http_server.get_port()}",
                     "response_mode": "query",
                     "scope": self._scopes,
                     "state": state
@@ -103,9 +103,9 @@ class MSALTokenHandler:
         url = address + urllib.parse.urlencode(params)
         webbrowser.open(url)
 
-        # We block with a timeout (default=20)
-        server.wait_for_authorisation_code()
-        code = server.get_auth_code()
+        # We block with a timeout (default is five minutes)
+        http_server.wait_for_authorisation_code()
+        code = http_server.get_auth_code()
         if code == '':
             return ''
         print(f'Got code: {code}')

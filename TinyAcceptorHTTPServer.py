@@ -3,18 +3,20 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from time import sleep
 from functools import partial
         
-class TinyAcceptorServer(HTTPServer):
+class TinyAcceptorHTTPServer(HTTPServer):
     """
     When we request an authorisation token from MSFT for our client app we
     provide it with a redirect URI of http://localhost. This is the address the
-    browser is redirected to once login/acceptance flow is completed.
+    browser is redirected to once login/acceptance flow is completed. The actual
+    authorisation token is included in the parameters of the URL.
 
-    This small server listens for the above response and either an error is 
-    reported ot the auth_code property is set.
+    This small server listens for the above response so it can extract the token
+    from the parameter. Either an error is reported (because MSFT sent one back)
+    or the auth_code property is set.
 
     NOTE: This is a very basic, simple HTTP server and, though, it doesn't serve
-    any files or local directories it's still presents an attack surface that could
-    be open for as long as the timeout you have selected. 
+    any files or local directories it's still an attack surface that could be 
+    open for as long as the timeout. 
     
     To mitigate this:
 
@@ -82,7 +84,7 @@ class TinyAcceptorServer(HTTPServer):
     def set_expected_state(self, state):
         self._state = state
 
-    def wait_for_authorisation_code(self, timeout=20):
+    def wait_for_authorisation_code(self, timeout=300):
         self.timeout = timeout
         with self:
             # We're only expecting one request
