@@ -1,12 +1,26 @@
 from msal import PublicClientApplication
+from TinyAcceptorServer import TinyAcceptorServer
 import sqlite3
 import logging
+import uuid
+import json as jsonlib
+import urllib
+import time
+import webbrowser
+from threading import Thread, current_thread
+
 
 
 logger = logging.getLogger(__name__)
 
 class MSALTokenHandler:
     
+    ONEDRIVE_AUTHORISE_URL=f'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?'
+
+    def _dbg_print_json(self, json_data):
+        json_formatted_str = jsonlib.dumps(json_data, indent=2)
+        print(json_formatted_str)
+
     def __init__(self, app_name, client_id, authority, scopes=['User.Read'], db_filepath='./tokens.db') -> None:
         """
         Handles retrieving tokens from MSAL and persists the 
@@ -29,6 +43,10 @@ class MSALTokenHandler:
         self._app_name = app_name
         self._scopes = scopes
         self._account = ''
+        self._client_id = client_id
+        self._current_token = ''
+        self._current_token_expiry = None
+
         self._pca = PublicClientApplication(client_id=client_id, authority=authority, client_credential=None)
         self._initialise_token_db(db_filepath=db_filepath)
 
@@ -67,6 +85,32 @@ class MSALTokenHandler:
         cursor = self._connection.cursor()
         cursor.execute('INSERT INTO token (app_name, refresh_token) VALUES (?, ?) ON CONFLICT (app_name) DO UPDATE SET refresh_token = ?;', (self._app_name, refresh_token, refresh_token))
         cursor.close()
+
+    def get_token2(self):
+        server = TinyAcceptorServer()
+        state = str(uuid.uuid4())
+        server.set_state(state)
+        address = self.ONEDRIVE_AUTHORISE_URL
+        params = {
+                    "client_id": self._client_id,
+                    "response_type": "code",
+                    "redirect_uri": f"http://localhost:{server.get_port()}",
+                    "response_mode": "query",
+                    "scope": self._scopes,
+                    "state": state
+                }
+        
+        url = address + urllib.parse.urlencode(params)
+        webbrowser.open(url)
+
+        # We block with a timeout
+        server.wait_for_authorisation_code(timeout=10)
+        code = server.get_code()
+        if code == '':
+            return ''
+        print(f'Got code: {code}')
+
+
 
     def get_token(self):
         """
