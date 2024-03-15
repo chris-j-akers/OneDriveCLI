@@ -89,7 +89,7 @@ class MSALTokenHandler:
     def get_token2(self):
         server = TinyAcceptorServer()
         state = str(uuid.uuid4())
-        server.set_state(state)
+        server.set_expected_state(state)
         address = self.ONEDRIVE_AUTHORISE_URL
         params = {
                     "client_id": self._client_id,
@@ -103,13 +103,12 @@ class MSALTokenHandler:
         url = address + urllib.parse.urlencode(params)
         webbrowser.open(url)
 
-        # We block with a timeout
-        server.wait_for_authorisation_code(timeout=10)
-        code = server.get_code()
+        # We block with a timeout (default=20)
+        server.wait_for_authorisation_code()
+        code = server.get_auth_code()
         if code == '':
             return ''
         print(f'Got code: {code}')
-
 
 
     def get_token(self):
