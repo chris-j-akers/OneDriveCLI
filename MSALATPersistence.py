@@ -86,7 +86,7 @@ class MSALTokenHandler:
         cursor.execute('INSERT INTO token (app_name, refresh_token) VALUES (?, ?) ON CONFLICT (app_name) DO UPDATE SET refresh_token = ?;', (self._app_name, refresh_token, refresh_token))
         cursor.close()
 
-    def get_token2(self):
+    def get_token_interactive(self):
         http_server = TinyAcceptorHTTPServer()
         state = str(uuid.uuid4())
         http_server.set_expected_state(state)
@@ -103,7 +103,8 @@ class MSALTokenHandler:
         url = address + urllib.parse.urlencode(params)
         webbrowser.open(url)
 
-        # We block with a timeout (default is five minutes)
+        # We block with a timeout (default is five minutes - you need to give
+        # people long enough to enter credentials and accept the Scopes)
         http_server.wait_for_authorisation_code()
         code = http_server.get_auth_code()
         if code == '':
