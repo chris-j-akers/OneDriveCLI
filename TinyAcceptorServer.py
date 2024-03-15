@@ -28,7 +28,8 @@ class TinyAcceptorServer(HTTPServer):
 
         https://learn.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/msa-oauth?view=odsp-graph-online
 
-        If the 
+        Either set the authorisation code (as taken from the URL parameters) or
+        an error if one was sent back.
         """
         def do_GET(self):
             data = parse_qs(self.path[2:])
