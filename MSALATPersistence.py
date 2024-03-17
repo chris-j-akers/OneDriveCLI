@@ -7,6 +7,7 @@ import json as jsonlib
 import urllib
 import webbrowser
 import requests
+from datetime import datetime as dt, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -97,28 +98,48 @@ class MSALTokenHandler:
                     "state": state
                 }
         url = self.ONEDRIVE_AUTHORISE_URL + urllib.parse.urlencode(params)
+        self._logger.debug(f'opening browser at: [{url}]')
         webbrowser.open(url)
+        self._logger.debug(f'starting TinyAcceptorHTTPServer listening on port [{http_server.get_port()}]')
         http_server.wait_for_authorisation_code(timeout=300)
         auth_code = http_server.get_auth_code()
         if auth_code == '':
-            return ''
+            self._logger.debug(f'no authorization code received from MSFT.')
+            return False
+        self._logger.debug(f'authorisation code [{auth_code}] received.')
         params = {
                     "client_id": self._client_id,
                     "redirect_uri": f"http://localhost:{http_server.get_port()}",
                     "code": auth_code,
                     "grant_type": "authorization_code"   
                  }
-        response = requests.post(self.ONEDRIVE_TOKEN_SERVER_URL, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=urllib.parse.urlencode(params))
-        # Check for 'error' in response
-        
-        # Set in cache
-        # Set timeout in cache
-        # Return token
-        self._dbg_print_json(response.json())
- 
+        self._logger.debug(f'requesting token from [{self.ONEDRIVE_TOKEN_SERVER_URL}]')
+        response = requests.post(self.ONEDRIVE_TOKEN_SERVER_URL, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=urllib.parse.urlencode(params))       
+        json = response.json()
+        if 'error' in json:
+            print(f'unable to get token, error from get_token_interactive():  {json["error"]} | {json["error_description"]}')
+            return False
+        self._current_token = json['access_token']
+        refresh_token = json['refresh_token']
+        self._current_token_expiry = dt.now() + timedelta(0,json['expires_in'])
+        self._logger.debug(f'received token [{self._current_token}] from MSFT with expiry time in [{self._current_token_expiry.strftime("%Y-%m-%d %H:%M:%S")}]')
+        self._upsert_refresh_token_in_db(refresh_token=refresh_token)
+        self._logger.debug(f'set refresh token [{refresh_token}] in db.')
+        return True
 
     def get_token2(self):
-        self.get_token_interactive()
+        if self._current_token != '' and dt.now() < self._current_token_expiry:
+            self._logger.debug('found token in cache, returning.')
+            return self._current_token
+
+        # if self.get_token_from_refresh_token():
+        #     return self._current_token
+
+        self._logger.debug('no token in cache or refresh token available, getting interactively.')
+        if self.get_token_interactive():
+            return self._current_token
+
+        
 
 #         return {"Authorization": f"bearer {token}", "Accept": "application/json"}
 #         POST https://login.live.com/oauth20_token.srf
@@ -127,7 +148,7 @@ class MSALTokenHandler:
 # client_id={client_id}&redirect_uri={redirect_uri}&client_secret={client_secret}
 # &code={code}&grant_type=authorization_code
 
-    def get_token(self):
+    def get_token(self) -> str:
         """
         Return a new token fetched using the MSAL `PublicClientApplication`
         class.
