@@ -85,6 +85,14 @@ class MSALTokenHandler:
         cursor.execute('INSERT INTO token (app_name, refresh_token) VALUES (?, ?) ON CONFLICT (app_name) DO UPDATE SET refresh_token = ?;', (self._app_name, refresh_token, refresh_token))
         cursor.close()
 
+    def _persist_token_data(self, token_data):
+        self._current_token = token_data['access_token']
+        refresh_token = token_data['refresh_token']
+        self._current_token_expiry = dt.now() + timedelta(0,token_data['expires_in'])
+        self._logger.debug(f'received token [{self._current_token}] from MSFT with expiry time in [{self._current_token_expiry.strftime("%Y-%m-%d %H:%M:%S")}]')
+        self._upsert_refresh_token_in_db(refresh_token=refresh_token)
+        self._logger.debug(f'set refresh token [{refresh_token}] in db.')
+
     def get_token_interactive(self):
         http_server = TinyAcceptorHTTPServer()
         state = str(uuid.uuid4())
@@ -119,34 +127,42 @@ class MSALTokenHandler:
         if 'error' in json:
             print(f'unable to get token, error from get_token_interactive():  {json["error"]} | {json["error_description"]}')
             return False
-        self._current_token = json['access_token']
-        refresh_token = json['refresh_token']
-        self._current_token_expiry = dt.now() + timedelta(0,json['expires_in'])
-        self._logger.debug(f'received token [{self._current_token}] from MSFT with expiry time in [{self._current_token_expiry.strftime("%Y-%m-%d %H:%M:%S")}]')
-        self._upsert_refresh_token_in_db(refresh_token=refresh_token)
-        self._logger.debug(f'set refresh token [{refresh_token}] in db.')
+        self._persist_token_data(json)
+        return True
+    
+    def get_token_refresh(self, refresh_token) -> str:
+        params = {
+                    "client_id": self._client_id,
+                    "redirect_uri": f"http://localhost",
+                    "refresh_token": refresh_token,
+                    "grant_type": "refresh_token"   
+                 }
+        self._logger.debug(f'requesting token from [{self.ONEDRIVE_TOKEN_SERVER_URL}]')
+        response = requests.post(self.ONEDRIVE_TOKEN_SERVER_URL, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=urllib.parse.urlencode(params))       
+        json = response.json()
+        if 'error' in json:
+            print(f'unable to get token, error from get_token_refresh():  {json["error"]} | {json["error_description"]}')
+            return False
+        self._persist_token_data(json)
         return True
 
     def get_token2(self):
         if self._current_token != '' and dt.now() < self._current_token_expiry:
             self._logger.debug('found token in cache, returning.')
             return self._current_token
-
-        # if self.get_token_from_refresh_token():
-        #     return self._current_token
-
+        self._logger.debug('no valid cached token, checking for refresh token')       
+        refresh_token = self._get_refresh_token_from_db()
+        if refresh_token != '':
+            token = self.get_token_refresh(refresh_token)
+            if token != '':
+                return token
         self._logger.debug('no token in cache or refresh token available, getting interactively.')
         if self.get_token_interactive():
             return self._current_token
-
         
-
-#         return {"Authorization": f"bearer {token}", "Accept": "application/json"}
-#         POST https://login.live.com/oauth20_token.srf
-# Content-Type: application/x-www-form-urlencoded
-
-# client_id={client_id}&redirect_uri={redirect_uri}&client_secret={client_secret}
-# &code={code}&grant_type=authorization_code
+        self._logger.debug('unable to get a token from anywhere')
+        print('error: unable to get a refresh token by any means, returning empty')
+        return ''
 
     def get_token(self) -> str:
         """
