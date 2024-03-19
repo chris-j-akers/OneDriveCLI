@@ -34,9 +34,6 @@ class OneDriveTokenHandler:
             * We check state value received in the result matches the one we sent
             with the original authorisation request (see MSFT docs)
             * After a timeout (default 5 minutes) we close the server with an error
-            * The request is expected locally from the browser, not from public 
-            internet, so ensure firewalls/windows defender etc are configured 
-            appropriately.
         
         Ultimately, up to you whether to use it or not.
         """
@@ -97,7 +94,8 @@ class OneDriveTokenHandler:
         def wait_for_authorisation_code(self, timeout=300):
             """
             We wait for just one request before the server closes. This request 
-            should always MSFT sending the authorisation code or an error.
+            should always be MSFT sending either an authorisation code or an e
+            rror.
 
             The default timeout is 300 seconds, or five minutes. It's tempting to 
             cut this to 30 seconds, or so, but you need to leave time for the
@@ -108,6 +106,7 @@ class OneDriveTokenHandler:
             with self:
                 self._logger.debug(f'listening on ip [{self.server_address}] on port [{self.server_port}]')
                 self.handle_request()
+            return
 
         def handle_timeout(self):
             print("error: timeout while waiting for microsoft authorisation code.")
@@ -208,7 +207,7 @@ class OneDriveTokenHandler:
         url = self.ONEDRIVE_AUTHORISE_URL + urllib.parse.urlencode(params)
         self._logger.debug(f'opening browser at: [{url}]')
         webbrowser.open(url)
-        self._logger.debug(f'starting TinyAcceptorHTTPServer listening on port [{http_server.get_port()}]')
+        self._logger.debug(f'starting TinyAcceptorHTTPServer on port [{http_server.get_port()}]')
         http_server.wait_for_authorisation_code(timeout=300)
         auth_code = http_server.get_auth_code()
         if auth_code == '':
@@ -262,7 +261,6 @@ class OneDriveTokenHandler:
         self._logger.debug('no token in cache or refresh token available, getting interactively.')
         if self.get_token_interactive():
             return self._current_token
-        
         self._logger.debug('unable to get a token from anywhere')
         print('error: unable to get a refresh token by any means, returning empty')
         return ''

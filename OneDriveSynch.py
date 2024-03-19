@@ -4,7 +4,7 @@ import requests
 import json as jsonlib
 import os
 from datetime import datetime
-from OneDriveTokenHandlerr import OneDriveTokenHandler as TokenHandler
+from OneDriveTokenHandler import OneDriveTokenHandler as TokenHandler
 
 logger = logging.getLogger(__name__)
                            
@@ -13,7 +13,7 @@ class OneDriveSynch:
     ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
     AUTHORITY='https://login.microsoftonline.com/consumers'
-    SCOPES=['Files.ReadWrite', 'Files.ReadWrite.All', 'openid', 'profile', 'User.Read', 'Files.Read','Files.Read.All', 'offline_access']
+    SCOPES=['Files.ReadWrite.All', 'openid', 'offline_access']
 
 # private:
     
@@ -290,6 +290,9 @@ class OneDriveSynch:
         self._put_upload(local_filepath=local_filepath, upload_url=upload_url)
         
     def rm(self, rel_remote_path, force=False):
+        pass
+
+    def mkdir(self, rel_remote_path):
         pass
 
     def cat(self, local_path):
