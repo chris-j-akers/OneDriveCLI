@@ -12,10 +12,8 @@ if __name__ == '__main__':
     ods = OneDriveSynch()
 
     if sys.argv[1] == 'init':
-        ods.debug_on(True)
         ods.initialise()
-        print(ods.ls())
-        print(ods.ls())
+        print('initialised')
         sys.exit(0)
 
     if not ods.is_initialised():

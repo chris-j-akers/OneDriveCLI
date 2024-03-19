@@ -1,16 +1,119 @@
-from TinyAcceptorHTTPServer import TinyAcceptorHTTPServer
 import sqlite3
 import logging
 import uuid
 import json as jsonlib
 import urllib
+from urllib.parse import parse_qs
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 import webbrowser
 import requests
 from datetime import datetime as dt, timedelta
 logger = logging.getLogger(__name__)
 
-class MSALTokenHandler:
-    
+class OneDriveTokenHandler:
+
+    class TinyAcceptorHTTPServer(HTTPServer):
+        """
+        When we request an authorisation token from MSFT for our client app we
+        provide it with a redirect URI of http://localhost. This is the address the
+        browser is redirected to once login/acceptance flow is completed. The actual
+        authorisation token is included in the parameters of the URL.
+
+        This small server listens for the above response so it can extract the token
+        from the parameter. Either an error is reported (because MSFT sent one back)
+        or the auth_code property is set.
+
+        NOTE: This is a very basic, simple HTTP server and, though, it doesn't serve
+        any files or local directories it's still an attack surface that could be 
+        open for as long as the timeout. 
+        
+        To mitigate this:
+
+            * The port is random (chosen by the OS)
+            * We wait for one request and one request only, then close the server
+            * We check state value received in the result matches the one we sent
+            with the original authorisation request (see MSFT docs)
+            * After a timeout (default 5 minutes) we close the server with an error
+            * The request is expected locally from the browser, not from public 
+            internet, so ensure firewalls/windows defender etc are configured 
+            appropriately.
+        
+        Ultimately, up to you whether to use it or not.
+        """
+        class Handler(SimpleHTTPRequestHandler):
+            """
+            Handle the GET request from MSFT which will contain our authorisation 
+            token in the URL as one of the parameters (or an error!).
+
+            https://learn.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/msa-oauth?view=odsp-graph-online
+
+            Also checks the state code returned matches the one we sent with the 
+            original authorisation request.
+            
+            Sets the authorisation code in the server so it can be retrieved later.
+            """
+            def do_GET(self):
+                data = parse_qs(self.path[2:])
+                code = data.get('code','')
+                state = data.get('state', '')
+                error = data.get('error','')
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                if error != '':
+                    print(f'error: got error in MSFT response: {error}.')
+                    return ''
+                if self.server.get_expected_state() != state[0]:
+                    print(f'error: state returned from MSFT does not match state sent in authorisation request (sent: {state[0]}, recvd: {self.server.get_state()}).')
+                    return ''
+                if code == '':
+                    self.wfile.write(bytes('error: didn\'t seem to get authorisation code from MSFT, and no error.', 'utf8'))
+                    return ''
+                else:
+                    self.server.set_auth_code(code[0])
+                    self.wfile.write(bytes('Authorised. You can close this browser window, now.', 'utf8'))
+
+        def __init__(self, port=0):
+            self._logger = logger.getChild(__class__.__name__)
+            super().__init__(server_address=('localhost',port), RequestHandlerClass=self.Handler)
+            self._auth_code = ''
+            self._state = ''
+
+        def get_port(self):
+            return self.server_port
+
+        def get_auth_code(self):
+            return self._auth_code
+        
+        def set_auth_code(self, code):
+            self._auth_code = code
+
+        def get_expected_state(self):
+            return self._state
+
+        def set_expected_state(self, state):
+            self._state = state
+
+        def wait_for_authorisation_code(self, timeout=300):
+            """
+            We wait for just one request before the server closes. This request 
+            should always MSFT sending the authorisation code or an error.
+
+            The default timeout is 300 seconds, or five minutes. It's tempting to 
+            cut this to 30 seconds, or so, but you need to leave time for the
+            user to enter their credentials and accept the scopes when MSFT presents
+            them.
+            """
+            self.timeout = timeout
+            with self:
+                self._logger.debug(f'listening on ip [{self.server_address}] on port [{self.server_port}]')
+                self.handle_request()
+
+        def handle_timeout(self):
+            print("error: timeout while waiting for microsoft authorisation code.")
+            self._error = f'timeout after {self.timeout} seconds.'
+            return ''
+
     ONEDRIVE_AUTHORISE_URL='https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?'
     ONEDRIVE_TOKEN_SERVER_URL='https://login.live.com/oauth20_token.srf?'
 
@@ -90,7 +193,7 @@ class MSALTokenHandler:
         self._logger.debug(f'set refresh token [{refresh_token}] in db.')
 
     def get_token_interactive(self):
-        http_server = TinyAcceptorHTTPServer(port=0)
+        http_server = self.TinyAcceptorHTTPServer(port=0)
         state = str(uuid.uuid4())
         http_server.set_expected_state(state)
         params = {
@@ -154,8 +257,7 @@ class MSALTokenHandler:
         refresh_token = self._get_refresh_token_from_db()
         if refresh_token != '':
             self._logger.debug(f"got refresh token [{refresh_token}] from database")
-            token = self.get_token_refresh(refresh_token)
-            if token != '':
+            if self.get_token_refresh(refresh_token):
                 return self._current_token
         self._logger.debug('no token in cache or refresh token available, getting interactively.')
         if self.get_token_interactive():
