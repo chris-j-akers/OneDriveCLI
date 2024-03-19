@@ -94,8 +94,8 @@ class OneDriveTokenHandler:
         def wait_for_authorisation_code(self, timeout=300):
             """
             We wait for just one request before the server closes. This request 
-            should always be MSFT sending either an authorisation code or an e
-            rror.
+            should always be MSFT sending either an authorisation code or an 
+            error.
 
             The default timeout is 300 seconds, or five minutes. It's tempting to 
             cut this to 30 seconds, or so, but you need to leave time for the
@@ -122,8 +122,9 @@ class OneDriveTokenHandler:
 
     def __init__(self, app_name, client_id, scopes=['User.Read'], db_filepath='./tokens.db') -> None:
         """
-        Handles retrieving tokens from MSAL and persists the 
-        associated refresh token to a `SqLite` db for future use.
+        Handles retrieving tokens from MSFT that can be used to access personal 
+        onedrive accounts. Also persists the associated refresh token to a 
+        `SqLite` db.
 
         Args:
             `app_name` (`string`)   : Name of your application (used to pull the 
@@ -135,7 +136,7 @@ class OneDriveTokenHandler:
             used to store refresh tokens (defaults to './tokens.db')
 
         Returns:
-            `MSALTokenHandler`      : A new `MSALTokenHandler` object
+            `OneDriveTokenHandler`      : A new `OneDriveTokenHandler` object
         """
         self._logger = logger.getChild(__class__.__name__)
         self._app_name = app_name
@@ -192,6 +193,12 @@ class OneDriveTokenHandler:
         self._logger.debug(f'set refresh token [{refresh_token}] in db.')
 
     def get_token_interactive(self):
+        """
+        Will open a web-browser at the standard MSFT login page where the user 
+        logs in to their MSFT account and accepts the scopes of this
+        application (the scopes are passed on creation of the OneDriveTokenHandler
+        object).
+        """
         http_server = self.TinyAcceptorHTTPServer(port=0)
         state = str(uuid.uuid4())
         http_server.set_expected_state(state)
