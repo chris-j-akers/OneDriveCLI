@@ -13,7 +13,7 @@ class OneDriveSynch:
     ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
     AUTHORITY='https://login.microsoftonline.com/consumers'
-    SCOPES=['Files.ReadWrite.All', 'Files.ReadWrite']
+    SCOPES=['Files.ReadWrite', 'Files.ReadWrite.All', 'openid', 'profile', 'User.Read', 'Files.Read','Files.Read.All', 'offline_access']
 
 # private:
     
@@ -25,7 +25,7 @@ class OneDriveSynch:
         self._logger = logger.getChild(__class__.__name__)
         self._logger.debug('creating OneDriveSynch object')
         self._setup_db(settings_db)
-        self._token_handler = TokenHandler(app_name='onedrive-synch', client_id=self.CLIENT_ID, authority=self.AUTHORITY, scopes=self.SCOPES, db_filepath=settings_db)
+        self._token_handler = TokenHandler(app_name='onedrive-synch', client_id=self.CLIENT_ID, scopes=self.SCOPES, db_filepath=settings_db)
         if self._get_setting('is_initialised') == 'true':
             self._initialised = True
             self._drive_id = self._get_setting('drive_id')

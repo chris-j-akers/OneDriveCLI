@@ -1,6 +1,9 @@
 from urllib.parse import parse_qs
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-        
+import logging
+
+logger = logging.getLogger(__name__)
+
 class TinyAcceptorHTTPServer(HTTPServer):
     """
     When we request an authorisation token from MSFT for our client app we
@@ -62,8 +65,9 @@ class TinyAcceptorHTTPServer(HTTPServer):
                 self.server.set_auth_code(code[0])
                 self.wfile.write(bytes('Authorised. You can close this browser window, now.', 'utf8'))
 
-    def __init__(self):
-        super().__init__(server_address=('127.0.0.1',0), RequestHandlerClass=self.Handler)
+    def __init__(self, port=0):
+        self._logger = logger.getChild(__class__.__name__)
+        super().__init__(server_address=('127.0.0.1',port), RequestHandlerClass=self.Handler)
         self._auth_code = ''
         self._state = ''
 
@@ -94,6 +98,7 @@ class TinyAcceptorHTTPServer(HTTPServer):
         """
         self.timeout = timeout
         with self:
+            self._logger.debug(f'listening on ip [{self.server_address}] on port [{self.server_port}]')
             self.handle_request()
 
     def handle_timeout(self):

@@ -1,4 +1,4 @@
-#!/home/cakers/Software/anaconda3/envs/onedrive-sync/bin/python
+#!/home/cakers/miniconda3/envs/onedrive-sync/bin/python
 
 from OneDriveSynch import OneDriveSynch
 import logging
@@ -12,11 +12,15 @@ if __name__ == '__main__':
     ods = OneDriveSynch()
 
     if sys.argv[1] == 'init':
+        ods.debug_on(True)
         ods.initialise()
+        print(ods.ls())
+        print(ods.ls())
+        sys.exit(0)
 
     if not ods.is_initialised():
         print('initialisation has not been run, please run "ods init" first')
-        sys,exit(1)
+        sys.exit(1)
 
     match(sys.argv[1]):
         case 'cd':
