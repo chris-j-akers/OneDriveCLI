@@ -116,7 +116,7 @@ class OneDriveSynch:
         headers = self._get_default_api_headers(self._token_handler.get_token())
         headers['Content-Type'] = 'application/json'
         self._logger.debug(f'headers = {headers}')
-        response = requests.post(url, headers=headers, json='{ "item": { "@microsoft.graph.conflictBehavior": "replace" } }')
+        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=headers, json='{ "item": { "@microsoft.graph.conflictBehavior": "replace" } }')
         if 'error' in (json := response.json()):
             print(f'error: {json['error']['code']} | {json['error']['message']}')
             return ''
