@@ -13,7 +13,7 @@ class OneDriveSynch:
     ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'
     AUTHORITY='https://login.microsoftonline.com/consumers'
-    SCOPES=['Files.ReadWrite.All', 'openid', 'offline_access']
+    SCOPES=['Files.ReadWrite.All', 'openid']
 
 # private:
     

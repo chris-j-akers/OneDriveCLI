@@ -141,6 +141,8 @@ class OneDriveTokenHandler:
         self._logger = logger.getChild(__class__.__name__)
         self._app_name = app_name
         self._scopes = scopes
+        if not 'offline_access' in self._scopes:
+            self._scopes.append('offline_access')
         self._account = ''
         self._client_id = client_id
         self._current_token = ''
