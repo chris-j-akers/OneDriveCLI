@@ -132,7 +132,7 @@ class OneDriveTokenHandler:
             `client_id` (`string`)  : The app_id/client_id of your registered app 
             taken from the Azure portal
             `scopes` (`[string]`)   : List of scopes required, defaults to 'User.Read' (see [Azure documentation](https://learn.microsoft.com/en-us/graph/permissions-reference))
-            `db_filepath` (`string`): The path and name of the `SQLite3` database 
+            `db_filepath` (`string`): The path and name of the `Sqlite3` database 
             used to store refresh tokens (defaults to './tokens.db')
 
         Returns:
@@ -237,6 +237,16 @@ class OneDriveTokenHandler:
         return True
     
     def get_token_refresh(self, refresh_token) -> str:
+        """
+        Retrieves a new token from Microsoft Graph based on `refresh_token` and
+        persists it to the local object and in the database.
+
+        Args:
+            `refresh_token` (`string`)   : The refresh token to use.
+
+        Returns:
+            `boolean`      : Whether or not a token could be retrieved
+        """
         params = {
                     "client_id": self._client_id,
                     "redirect_uri": f"http://localhost",
@@ -256,6 +266,15 @@ class OneDriveTokenHandler:
         return True
     
     def get_token(self):
+        """
+        Generate a new access token based on the following ordered attempts:
+            1: Try and find a current, live token in the cache
+            2: Try and find a refresh token in the DB
+            3: Get a token using interactive logon
+
+        Returns:
+            `string`      : The retrieved token or '' if one could not be found            
+        """
         if self._current_token != '' and dt.now() < self._current_token_expiry:
             self._logger.debug('found token in cache, returning.')
             return self._current_token
