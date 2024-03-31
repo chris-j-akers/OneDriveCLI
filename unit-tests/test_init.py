@@ -3,7 +3,7 @@ import sqlite3
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from OneDriveSynch import OneDriveSynch
+from OneDriveCLI import OneDriveCLI
 
 class TestInitialisation:
 
@@ -27,7 +27,7 @@ class TestInitialisation:
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
 
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         assert os.path.exists(test_settings_file)
         assert ods._initialised == False
@@ -53,7 +53,7 @@ class TestInitialisation:
 
         assert os.path.exists(test_settings_file)
     
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         assert ods._initialised == True
         assert ods._drive_id == '12345678'

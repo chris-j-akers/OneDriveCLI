@@ -8,7 +8,7 @@ from OneDriveTokenHandler.OneDriveTokenHandler import OneDriveTokenHandler
 
 logger = logging.getLogger(__name__)
                            
-class OneDriveSynch:
+class OneDriveCLI:
 
     ONEDRIVE_ENDPOINT = 'https://graph.microsoft.com/v1.0'
     CLIENT_ID='9806a116-6f7d-4154-a06e-0c887dd51eed'

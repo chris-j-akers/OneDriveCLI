@@ -3,7 +3,7 @@ import sqlite3
 import logging
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from OneDriveSynch import OneDriveSynch
+from OneDriveCLI import OneDriveCLI
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -13,7 +13,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         cwd = '/'
         nwd = ods._get_absolute_path(cwd, '/root/path/to/my/current/dir')
@@ -26,7 +26,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
         
         cwd = '/path/to/my/current/dir'    
         nwd = ods._get_absolute_path(cwd, '/path/to/../')
@@ -39,7 +39,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
         
         cwd = '/path/to/my/current/dir'
         nwd = ods._get_absolute_path(cwd, '../../')
@@ -52,7 +52,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
         
         cwd = '/path/to/my/current/dir'
         nwd = ods._get_absolute_path(cwd, '../../../my/../' )
@@ -65,7 +65,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
         
         cwd = '/path/to/my/current/dir'
         nwd = ods._get_absolute_path(cwd, './')
@@ -78,7 +78,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         cwd = ('/path/to/my/current/dir')
         # Actual Test
@@ -92,7 +92,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         cwd = '/path/to/my/current/dir'
         nwd = ods._get_absolute_path(cwd, './new/./path')
@@ -105,7 +105,7 @@ class TestAbsolutePath:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         cwd = '/path/to/my/current/dir'
         nwd = ods._get_absolute_path(cwd, '/')

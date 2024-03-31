@@ -3,7 +3,7 @@ import sqlite3
 import logging
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from OneDriveSynch import OneDriveSynch
+from OneDriveCLI import OneDriveCLI
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -13,7 +13,7 @@ class TestDB:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         key = 'my_setting'
         val = 'value'
@@ -39,7 +39,7 @@ class TestDB:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         key = 'my_setting'
         val = 'value'
@@ -74,7 +74,7 @@ class TestDB:
         test_settings_file = './test_settings.db'
         if os.path.exists(test_settings_file):
             os.remove(test_settings_file)
-        ods = OneDriveSynch(settings_db=test_settings_file)
+        ods = OneDriveCLI(settings_db=test_settings_file)
 
         key = 'my_setting'
         val = 'value'

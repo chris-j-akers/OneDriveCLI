@@ -1,6 +1,6 @@
 #!/home/cakers/Software/anaconda3/envs/onedrive-sync/bin/python
 
-from OneDriveSynch import OneDriveSynch
+from OneDriveCLI import OneDriveCLI
 import logging
 import sys
 
@@ -9,11 +9,11 @@ import sys
 
 if __name__ == '__main__':
     logging.basicConfig()
-    ods = OneDriveSynch()
+    ods = OneDriveCLI()
 
     if sys.argv[1] == 'init':
         ods.initialise()
-        print('ODS initialised')
+        print('OneDrive CLI for Linux initialised')
         sys.exit(0)
 
     if not ods.is_initialised():
