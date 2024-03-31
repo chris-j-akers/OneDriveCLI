@@ -4,7 +4,7 @@ import requests
 import json as jsonlib
 import os
 from datetime import datetime
-from OneDriveTokenHandler import OneDriveTokenHandler as TokenHandler
+from OneDriveTokenHandler.OneDriveTokenHandler import OneDriveTokenHandler
 
 logger = logging.getLogger(__name__)
                            
@@ -25,7 +25,7 @@ class OneDriveSynch:
         self._logger = logger.getChild(__class__.__name__)
         self._logger.debug('creating OneDriveSynch object')
         self._setup_db(settings_db)
-        self._token_handler = TokenHandler(app_name='onedrive-synch', client_id=self.CLIENT_ID, scopes=self.SCOPES, db_filepath=settings_db)
+        self._token_handler = OneDriveTokenHandler(app_name='onedrive-synch', client_id=self.CLIENT_ID, scopes=self.SCOPES, db_filepath=settings_db)
         if self._get_setting('is_initialised') == 'true':
             self._initialised = True
             self._drive_id = self._get_setting('drive_id')

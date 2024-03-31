@@ -1,4 +1,4 @@
-#!/home/cakers/miniconda3/envs/onedrive-sync/bin/python
+#!/home/cakers/Software/anaconda3/envs/onedrive-sync/bin/python
 
 from OneDriveSynch import OneDriveSynch
 import logging
