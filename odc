@@ -1,6 +1,7 @@
 #!/home/cakers/Software/anaconda3/envs/onedrive-sync/bin/python
 
 from OneDriveCLI import OneDriveCLI
+import CLICommands as cli
 import logging
 import sys
 
@@ -28,7 +29,10 @@ if __name__ == '__main__':
         case 'pwd':
             print(odc.pwd())
         case 'get':
-            odc.get(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else './')
+            try:
+                cli.Get(sys.argv).execute()
+            except:
+                sys.exit(1)
         case 'put':
             odc.put(sys.argv[2], sys.argv[3])
         case 'debug-on':
