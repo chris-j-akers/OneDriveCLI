@@ -9,31 +9,31 @@ import sys
 
 if __name__ == '__main__':
     logging.basicConfig()
-    ods = OneDriveCLI()
+    odc = OneDriveCLI()
 
     if sys.argv[1] == 'init':
-        ods.initialise()
+        odc.initialise()
         print('OneDrive CLI for Linux initialised')
         sys.exit(0)
 
-    if not ods.is_initialised():
+    if not odc.is_initialised():
         print('initialisation has not been run, please run "ods init" first')
         sys.exit(1)
 
     match(sys.argv[1]):
         case 'cd':
-            print(ods.cd(sys.argv[2] if len(sys.argv) > 2 else '/'))
+            print(odc.cd(sys.argv[2] if len(sys.argv) > 2 else '/'))
         case 'ls':
-            print(ods.ls())
+            print(odc.ls())
         case 'pwd':
-            print(ods.pwd())
+            print(odc.pwd())
         case 'get':
-            ods.get(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else './')
+            odc.get(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else './')
         case 'put':
-            ods.put(sys.argv[2], sys.argv[3])
+            odc.put(sys.argv[2], sys.argv[3])
         case 'debug-on':
-            ods.debug_on(True)
+            odc.debug_on(True)
         case 'debug-off':
-            ods.debug_on(False)
+            odc.debug_on(False)
         case other:
             print(f'ods: unknown command: {sys.argv[1]}')
