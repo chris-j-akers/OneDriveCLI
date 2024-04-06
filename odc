@@ -1,6 +1,4 @@
 #!/home/cakers/Software/anaconda3/envs/onedrive-sync/bin/python
-
-from OneDriveCLI import OneDriveCLI
 import CLICommands as cli
 import logging
 import sys
@@ -10,34 +8,34 @@ import sys
 
 if __name__ == '__main__':
     logging.basicConfig()
-    odc = OneDriveCLI()
 
     if sys.argv[1] == 'init':
-        odc.initialise()
-        print('OneDrive CLI for Linux initialised')
-        sys.exit(0)
+        cli.Init().execute()
 
-    if not odc.is_initialised():
+    if not cli.IsInit().execute():
         print('initialisation has not been run, please run "ods init" first')
         sys.exit(1)
 
     match(sys.argv[1]):
         case 'cd':
-            print(odc.cd(sys.argv[2] if len(sys.argv) > 2 else '/'))
+            cli.Cd(sys.argv).execute()
         case 'ls':
-            print(odc.ls())
+            cli.Ls().execute()
         case 'pwd':
-            print(odc.pwd())
+            cli.Pwd().execute()
         case 'get':
             try:
                 cli.Get(sys.argv).execute()
             except:
                 sys.exit(1)
         case 'put':
-            odc.put(sys.argv[2], sys.argv[3])
+            try:
+                cli.Put(sys.argv).execute()
+            except:
+                sys.exit(1)
         case 'debug-on':
-            odc.debug_on(True)
+            cli.DebugOn().execute()
         case 'debug-off':
-            odc.debug_on(False)
+            cli.DebugOff().execute()
         case other:
             print(f'ods: unknown command: {sys.argv[1]}')
