@@ -45,6 +45,11 @@ if __name__ == '__main__':
                 sys.exit(1)
             destination = get_arg(sys.argv,3, './')
             odc.put(source, destination)
+        case 'mkdir':
+            if (path := get_arg(sys.argv, 2)) is None:
+                print('error: no directory name specified')
+                sys.exit(1)
+            odc.mkdir(path)
         case 'debug-on':
             odc.debug_on(True)
         case 'debug-off':

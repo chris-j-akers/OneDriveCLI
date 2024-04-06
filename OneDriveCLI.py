@@ -89,14 +89,20 @@ class OneDriveCLI:
         response = requests.get(self.ONEDRIVE_ENDPOINT + url, headers=self._get_default_api_headers(self._token_handler.get_token()))
         return response
     
-    def _get_onedrive_dir_id(self, remote_path):
+    def _get_onedrive_item_id(self, remote_path):
         self._logger.debug(f'trying to get item id for "{remote_path}"')
         url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
         response = self._onedrive_api_get(url)
         if 'error' in (json := response.json()):
-            print(f'error ({__name__}): {json['error']['code']} | {json['error']['message']}')
+            self._logger.debug(f'error returned from API (this is fine if problem is item doesn\'t exist): {json['error']['code']} | {json['error']['message']}')
             return ''
         return json['id']
+
+    def _get_parent_item_id(self, remote_path):
+        parent_dir_list = [path for path in remote_path.split('/') if path not in ['','.']]
+        parent_dir_list.pop()
+        parent_dir = '/' if parent_dir_list == [] else ('/' + '/'.join(parent_dir_list))
+        return self._get_onedrive_item_id(parent_dir)
 
     def _put_item_exists(self, local_file, remote_path):
         self._logger.debug(f'trying to get item id for "{local_file}" in "{remote_path}"')
@@ -109,7 +115,8 @@ class OneDriveCLI:
 
     def _put_get_upload_session(self, local_file, remote_path):
         self._logger.debug(f'getting upload session for upload of {local_file} to {remote_path}')
-        if (dir_id := self._get_onedrive_dir_id(remote_path=remote_path)) == '':
+        if (dir_id := self._get_onedrive_item_id(remote_path=remote_path)) == '':
+            print(f'error: item: {remote_path} doesn\'t exist')
             return ''
         url = f'/drives/{self._drive_id}/items/{dir_id}:/{local_file}:/createUploadSession'
         self._logger.debug(f'using url: {url}')
@@ -293,7 +300,30 @@ class OneDriveCLI:
         pass
 
     def mkdir(self, rel_remote_path):
-        pass
+        abs_remote_path = self._get_absolute_path(self._cwd, rel_remote_path)
+        self._logger.debug(f'attempting to mkdir path: {abs_remote_path}')
+        if self._get_onedrive_item_id(remote_path=abs_remote_path) != '':
+            print('error: directory already exists')
+            return
+        if (parent_item_id := self._get_parent_item_id(abs_remote_path)) == '':
+            print('error: parent directory specified does not exist')
+            return
+        url = f'/drives/{self._drive_id}/items/{parent_item_id}/children'
+        headers = self._get_default_api_headers(self._token_handler.get_token())
+        headers['Content-Type'] = 'application/json'
+        self._logger.debug(f'headers = {headers}')
+        payload = (
+                    {
+                        "name": f"{rel_remote_path.split('/')[-1]}",
+                        "folder": { },
+                        "@microsoft.graph.conflictBehavior": "rename"
+                    }
+                  )
+        response = requests.post(self.ONEDRIVE_ENDPOINT + url, headers=headers, json=payload)
+        if response.status_code != 201:
+            print(f'error: error occurred during creation of directory: {response.text}')
+            return
+        print(f'Created {abs_remote_path}')
 
     def cat(self, local_path):
         pass
