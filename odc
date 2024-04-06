@@ -1,41 +1,53 @@
 #!/home/cakers/Software/anaconda3/envs/onedrive-sync/bin/python
-import CLICommands as cli
+from OneDriveCLI import OneDriveCLI
 import logging
 import sys
+import os
 
 # App/Client ID: 9806a116-6f7d-4154-a06e-0c887dd51eed
 # Tenant ID: 42a7cc42-d023-4e93-898d-3777ba423ebe
 
+def get_arg(arglist, index, default=None):
+    try:
+        return arglist[index]
+    except(IndexError):
+        return default
+
 if __name__ == '__main__':
     logging.basicConfig()
+    odc = OneDriveCLI(f'{os.path.expanduser('~')}/.config/onedrive-cli/settings.db')
 
     if sys.argv[1] == 'init':
-        cli.Init().execute()
+        odc.initialise()
+        sys.exit(0)
 
-    if not cli.IsInit().execute():
+    if not odc.is_initialised():
         print('initialisation has not been run, please run "ods init" first')
         sys.exit(1)
 
     match(sys.argv[1]):
         case 'cd':
-            cli.Cd(sys.argv).execute()
+            path = get_arg(sys.argv, 2, '/')
+            print(odc.cd(path))
         case 'ls':
-            cli.Ls().execute()
+            print(odc.ls())
         case 'pwd':
-            cli.Pwd().execute()
+            print(odc.pwd())
         case 'get':
-            try:
-                cli.Get(sys.argv).execute()
-            except:
+            if (source := get_arg(sys.argv,2)) is None:
+                print("error: no source file specified")
                 sys.exit(1)
+            destination = get_arg(sys.argv, 3, './')
+            odc.get(source, destination)
         case 'put':
-            try:
-                cli.Put(sys.argv).execute()
-            except:
+            if (source := get_arg(sys.argv,2)) is None:
+                print("error: no source file specified")
                 sys.exit(1)
+            destination = get_arg(sys.argv,3, './')
+            odc.put(source, destination)
         case 'debug-on':
-            cli.DebugOn().execute()
+            odc.debug_on(True)
         case 'debug-off':
-            cli.DebugOff().execute()
+            odc.debug_on(False)
         case other:
             print(f'ods: unknown command: {sys.argv[1]}')
