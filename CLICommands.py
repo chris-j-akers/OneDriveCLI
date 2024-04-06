@@ -15,7 +15,6 @@ class CLICommand:
 
 # Commands 
 
-
 class Init(CLICommand):
 
     def execute(self):
@@ -30,11 +29,13 @@ class IsInit(CLICommand):
         odc = OneDriveCLI()
         return odc.is_initialised()
 
+
 class DebugOn(CLICommand):
 
     def execute(self):
         odc = OneDriveCLI()
         odc.debug_on(True)
+
 
 class DebugOff(CLICommand):
 
@@ -42,11 +43,13 @@ class DebugOff(CLICommand):
         odc = OneDriveCLI()
         odc.debug_on(False)
 
+
 class Pwd(CLICommand):
 
     def execute(self):
         odc = OneDriveCLI()
         print(odc.pwd())
+        
 
 class Ls(CLICommand):
 
