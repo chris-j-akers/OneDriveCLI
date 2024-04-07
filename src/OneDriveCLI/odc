@@ -52,7 +52,7 @@ if __name__ == '__main__':
             odc.mkdir(path)
         case 'rm':
             if (path := get_arg(sys.argv, 2)) is None:
-                print('error: not item to delete specified')
+                print('error: no item to delete specified')
                 sys.exit(1)
             odc.rm(path)
         case 'debug-on':
