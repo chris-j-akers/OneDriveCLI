@@ -300,7 +300,7 @@ class OneDriveCLI:
         abs_remote_path = self._get_absolute_path(self._cwd, rel_remote_path)
         self._logger.debug(f'attempting to mkdir path: {abs_remote_path}')
         if (item_id := self._get_onedrive_item_id(remote_path=abs_remote_path)) == '':
-            print('error: item does not exists')
+            print('error: item does not exist')
             return
         if input(f'Are you sure you want to move item {abs_remote_path} to the recycle bin? (Y/N)').upper() == 'N':
             return ''        
