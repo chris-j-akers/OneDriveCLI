@@ -50,6 +50,11 @@ if __name__ == '__main__':
                 print('error: no directory name specified')
                 sys.exit(1)
             odc.mkdir(path)
+        case 'rm':
+            if (path := get_arg(sys.argv, 2)) is None:
+                print('error: not item to delete specified')
+                sys.exit(1)
+            odc.rm(path)
         case 'debug-on':
             odc.debug_on(True)
         case 'debug-off':

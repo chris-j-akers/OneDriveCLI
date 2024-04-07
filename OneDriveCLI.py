@@ -297,7 +297,20 @@ class OneDriveCLI:
         self._put_upload(local_filepath=local_filepath, upload_url=upload_url)
         
     def rm(self, rel_remote_path, force=False):
-        pass
+        abs_remote_path = self._get_absolute_path(self._cwd, rel_remote_path)
+        self._logger.debug(f'attempting to mkdir path: {abs_remote_path}')
+        if (item_id := self._get_onedrive_item_id(remote_path=abs_remote_path)) == '':
+            print('error: item does not exists')
+            return
+        if input(f'Are you sure you want to move item {abs_remote_path} to the recycle bin? (Y/N)').upper() == 'N':
+            return ''        
+        url = f'/drives/{self._drive_id}/items/{item_id}'
+        headers = self._get_default_api_headers(self._token_handler.get_token())
+        response = requests.delete(self.ONEDRIVE_ENDPOINT + url, headers=headers)
+        if response.status_code != 204:
+            print(f'error: error occurred during deletion of item: {response.text}')
+            return
+        print(f'deleted: {abs_remote_path}')        
 
     def mkdir(self, rel_remote_path):
         abs_remote_path = self._get_absolute_path(self._cwd, rel_remote_path)
@@ -323,7 +336,7 @@ class OneDriveCLI:
         if response.status_code != 201:
             print(f'error: error occurred during creation of directory: {response.text}')
             return
-        print(f'Created {abs_remote_path}')
+        print(f'created: {abs_remote_path}')
 
     def cat(self, local_path):
         pass
