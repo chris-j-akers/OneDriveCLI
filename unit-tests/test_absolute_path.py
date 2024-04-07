@@ -1,9 +1,6 @@
 import os
-import sqlite3
 import logging
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from OneDriveCLI import OneDriveCLI
+from src.OneDriveCLI.OneDriveCLI import OneDriveCLI
 
 logging.getLogger().setLevel(logging.DEBUG)
 
