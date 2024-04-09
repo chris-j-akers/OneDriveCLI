@@ -352,7 +352,7 @@ def get_arg(arglist, index, default=None):
 
 def main():
     logging.basicConfig()
-    odc = OneDriveCLI(f'{os.path.expanduser('~')}/.config/onedrive-cli/settings.db')
+    odc = OneDriveCLI(f'{os.path.expanduser('~')}/.config/OneDriveCLI/settings.db')
 
     if get_arg(sys.argv, 1) == None:
         print("----------------------------------------------------------------------------------------------")
