@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "OneDriveCLI"
+version = "0.0.1"
+authors = [
+  { name="cakers", email="chris.j.akers@gmail.com" },
+]
+description = "Interface with your OneDrive from Linux terminal"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+]
+
+[tool.setuptools.packages]
+include = ['OneDriveTokenHandler']
+
+[project.scripts]
+odc = "OneDriveCLI.OneDriveCLI:main"
+
+[project.urls]
+Source = "https://github.com/chris-j-akers/OneDriveCLI"
+AuthorBlog = "https://blog.cakers.io"
