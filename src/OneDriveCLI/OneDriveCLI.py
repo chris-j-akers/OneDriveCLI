@@ -344,9 +344,6 @@ class OneDriveCLI:
     def cat(self, local_path):
         pass
 
-# App/Client ID: 9806a116-6f7d-4154-a06e-0c887dd51eed
-# Tenant ID: 42a7cc42-d023-4e93-898d-3777ba423ebe
-
 def get_arg(arglist, index, default=None):
     try:
         return arglist[index]
@@ -356,6 +353,23 @@ def get_arg(arglist, index, default=None):
 def main():
     logging.basicConfig()
     odc = OneDriveCLI(f'{os.path.expanduser('~')}/.config/onedrive-cli/settings.db')
+
+    if get_arg(sys.argv, 1) == None:
+        print("----------------------------------------------------------------------------------------------")
+        print("OneDriveCLI | (C) 2024 Chris Akers | https://github.com/chris-j-akers | https://blog.cakers.io")
+        print("----------------------------------------------------------------------------------------------")
+        print("initialise                      : 'odc init'")
+        print("change directory                : 'odc cd <dir_name>'")
+        print("list items in current directory : 'odc ls'")
+        print("get current directory           : 'odc pwd'")
+        print("make new directory              : 'odc mkdir <remote_path>'")
+        print("delete item                     : 'odc rm <remote_path>'")
+        print("get file from current directory : 'odc get <remote_path> [local_path]'")
+        print("put file to current directory   : 'odc put <local_path> [remote_path]'")
+        print("")
+        print("* <> = required parameter, [] = optional parameter")
+        print("----------------------------------------------------------------------------------------------")
+        sys.exit(0)
 
     if sys.argv[1] == 'init':
         odc.initialise()
