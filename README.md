@@ -78,7 +78,7 @@ disable debug traces            : 'odc debug-off'
 
 See Initialisation section, above. `odc init` will initialise OneDriveCLI for use with your personal OneDrive.
 
-The application will open your default browser at the Microsoft 365 Logon page where you will need to log in to your Microsoft account and permit access to your OneDrive.
+The application will open your default browser at the Microsoft 365 Logon page where you will need to log in to your Microsoft account and permit access to OneDrive.
 
 Initialisation creates a sub-directory called `OneDriveCLI` in `~/.config` where it stores a *sqlite3* database called `settings.db`. This database contains session-state and refresh tokens required by Microsoft Graph.
 
@@ -122,10 +122,12 @@ d  https://1drv.ms/f/s!AIkx_qX5s59ThJAC  Chris Akers  2021-12-20 10:16:32  Chris
 d  https://1drv.ms/f/s!AIkx_qX5s59TiK4V  Chris Akers  2024-01-31 16:15:55  Chris Akers  2024-01-31 16:15:54  37021051  reverse-engineering-for-beginners                                       
 f  https://1drv.ms/b/s!AIkx_qX5s59Tg_8x  Chris Akers  1970-01-01 00:00:00  Chris Akers  2021-06-02 14:17:27   3543397  8080 Programmers Manual.pdf                                             
 f  https://1drv.ms/b/s!AIkx_qX5s59TiJsy  Chris Akers  2023-05-29 10:07:16  Chris Akers  2023-05-29 10:07:16   3643165  Andrew S. Tanenbaum - Operating Systems. Design and Implementation.pdf  
-f  https://1drv.ms/b/s!AIkx_qX5s59Th-RA  Chris Akers  2022-08-22 15:44:56  Chris Akers  2022-08-22 15:44:56    620127  AWS_Interview_Questions_Answers__1661183088.pdf   
+f  https://1drv.ms/b/s!AIkx_qX5s59Th-RA  Chris Akers  2022-08-22 15:44:56  Chris Akers  2022-08-22 15:44:56    620127  AWS_Interview_Questions_Answers__1661183088.pdf
+
+/drives/539fb3f9a5fe3189/root:/
 ```
 
-Output is split into eight fields described below.
+Output is split into the eight fields described below.
 
 | Field              | Description                                                                |
 |--------------------|----------------------------------------------------------------------------|
@@ -171,7 +173,7 @@ deleted: /tech-books/test-dir
 
 `odc get <remote_path> [local_path]`
 
-Download a file to your local host. By default will download to current local directory.
+Download a file to your local host. If no local path is specified, will download to current local directory.
 
 ```
 ➜ odc get ./tech-books/reverse-engineering-for-beginners/october-2023/RE4B-EN-October-2023.pdf
@@ -185,7 +187,7 @@ Downloading [RE4B-EN-October-2023.pdf] to [./]
 
 `odc put <local_path> [remote_path]`
 
-Upload a file to your local host. By default will upload to the current OneDrive directory.
+Upload a file from your local host. If no remote path is specified, will upload to the current OneDrive directory.
 
 ```
 ➜ odc put ./RE4B-EN-October-2023.pdf ./books
@@ -206,7 +208,6 @@ Enables DEBUG trace statements.
 ```
 ➜ odc debug-on
 DEBUG:OneDriveCLI.OneDriveCLI.OneDriveCLI:updating value "debug_on" to "true" in settings db
-~ via 🅒 onedrive-sync 
 ➜ odc ls
 DEBUG:OneDriveCLI.OneDriveCLI.OneDriveCLI:updating value "debug_on" to "true" in settings db
 DEBUG:OneDriveCLI.OneDriveCLI.OneDriveCLI:drive id set to "539fb3f9a5fe3189" (if this is "None" then DB is new and Initialise() needs to be run)
