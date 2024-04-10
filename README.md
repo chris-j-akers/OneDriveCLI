@@ -10,7 +10,9 @@ Currently, only desktop Linux versions are supported as the initialisation proce
 
 ## Installation
 
-The application can be built and installed by cloning this repo (note the `--recurse` option), the running `make install`:
+The application can be built and installed by cloning this repo then running `make install`:
+
+Note the `--recurse` option in the `clone` command below.
 
 ```
 ➜ git clone --recurse git@github.com:chris-j-akers/OneDriveCLI.git
