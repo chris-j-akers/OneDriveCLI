@@ -96,15 +96,17 @@ Prints the current working directory.
 
 `odc cd <new_dir>`
 
-Change current working directory to one specified by the parameter. Standard shortcuts can be used, here such as `./` for current directory and `..` for parent directory. 
+Change current working directory to one specified by the parameter.
 
-`cd` with no parameter changes the to `root`.
+Standard shortcuts can be used, here such as `./` for current directory and `..` for parent directory. 
+
+Using `cd` with no `<new_dir>` parameter changes the directory to `root`.
 
 ```
-➜ odc cd ..
-/drives/539fb3f9a5fe3189/root:/
 ➜ odc cd ./tech-books
 /drives/539fb3f9a5fe3189/root:/tech-books
+➜ odc cd
+/drives/539fb3f9a5fe3189/root:/
 ```
 ### List Items in Current Working Directory
 
@@ -113,6 +115,7 @@ Change current working directory to one specified by the parameter. Standard sho
 List all items in current working directory.
 
 ```
+➜ odc ls
 d  https://1drv.ms/f/s!AIkx_qX5s59TiIhJ  Chris Akers  2023-06-08 12:30:54  Chris Akers  2023-06-08 12:29:27  12340440  _backup                                                                 
 d  https://1drv.ms/f/s!AIkx_qX5s59ThJAC  Chris Akers  2021-12-20 10:16:32  Chris Akers  2021-12-20 10:16:31   4960207  Learning Public Key Infrastructure form Scratch                         
 d  https://1drv.ms/f/s!AIkx_qX5s59TiK4V  Chris Akers  2024-01-31 16:15:55  Chris Akers  2024-01-31 16:15:54  37021051  reverse-engineering-for-beginners                                       
@@ -121,7 +124,7 @@ f  https://1drv.ms/b/s!AIkx_qX5s59TiJsy  Chris Akers  2023-05-29 10:07:16  Chris
 f  https://1drv.ms/b/s!AIkx_qX5s59Th-RA  Chris Akers  2022-08-22 15:44:56  Chris Akers  2022-08-22 15:44:56    620127  AWS_Interview_Questions_Answers__1661183088.pdf   
 ```
 
-Output is split into eight fields, as described below.
+Output is split into eight fields which are described below.
 
 | Field              | Description                                                                |
 |--------------------|----------------------------------------------------------------------------|
