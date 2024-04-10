@@ -72,9 +72,8 @@ disable debug traces            : 'odc debug-off'
 
 ### Initialise
 
-```
-odc init
-```
+`odc init`
+
 See Initialisation section, above. `odc init` will initialise OneDriveCLI for use with your personal OneDrive.
 
 The application will open your default browser at the Microsoft 365 Logon page where you will need to log in to your Microsoft account and permit access to your OneDrive.
@@ -124,12 +123,12 @@ f  https://1drv.ms/b/s!AIkx_qX5s59TiJsy  Chris Akers  2023-05-29 10:07:16  Chris
 f  https://1drv.ms/b/s!AIkx_qX5s59Th-RA  Chris Akers  2022-08-22 15:44:56  Chris Akers  2022-08-22 15:44:56    620127  AWS_Interview_Questions_Answers__1661183088.pdf   
 ```
 
-Output is split into eight fields which are described below.
+Output is split into eight fields described below.
 
 | Field              | Description                                                                |
 |--------------------|----------------------------------------------------------------------------|
 | Item Type          | d = directory, f = file                                                    |
-| Link               | Directory item's URL. Can be used access the item directly using a browser |
+| URL                | URL for item. Can be used to access the item directly in a browser         |
 | Creator            | Name of file creator                                                       |
 | Create Date        | Date the file was created                                                  |
 | Last Modifier      | Name of last person to modify the file                                     |
@@ -139,9 +138,7 @@ Output is split into eight fields which are described below.
 
 ### Make New Directory
 
-```
-odc mkdir <remote_path>
-```
+`odc mkdir <remote_path>`
 
 Make a new directory.
 
