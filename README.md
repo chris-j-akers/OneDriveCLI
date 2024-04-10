@@ -6,6 +6,8 @@ OneDriveCLI for Linux provides a simple command-line interface into consumer Mic
 
 The application is written in Python.
 
+Currently, only desktop Linux versions are supported as the initialisation process requires a default browser which is used to enter Microsoft OneDrive account details.
+
 ## Source
 
 The GitHub Repo link is here: https://github.com/chris-j-akers/OneDriveCLI
@@ -18,24 +20,26 @@ The application can be built and installed by cloning this repo (note the `--rec
 ➜ git clone --recurse git@github.com:chris-j-akers/OneDriveCLI.git
 ➜ make install
 ```
-Note that the installation process will create a sub-directory called `OneDriveCLI` in your `~/.config` directory. This is where a SQLite database is stored. The database is used to persist state and settings.
+Note that the installation process will create a sub-directory called `OneDriveCLI` in your `~/.config` directory. This is where a SQLite database is stored. The database is used to persist state and settings, including Microsoft Graph Refresh tokens.
 
 ## Initialisation
 
-Before first use, you must register the app with your Microsoft OneDrive account with the following command:
+Before first use, you must register the app with your Microsoft OneDrive account using the following command:
 
 ```
 ➜ odc init
 ```
 This will open your default web-browser and present you with the Microsoft OneDrive logon page. You will need to logon and accept the access requirements for the application.
 
-![Example of Access Requirements Request](readme-assets/odc-access-request.png)
+After logging on you'll be presented with a request to accept the access requirements for the application.
 
-After logging on, you will be presented with a request to accept the access requirements for the application.
+![Example of Access Requirements Request](readme-assets/odc-access-request.png)
 
 ### Revoking App Access
 
-OneDriveCLI's access can be revoked at any time by logging onto your Microsoft 365 Account and selecting: `My Account` -> `Privacy` -> `App Access`.
+Access can be revoked at any time by logging in to your Microsoft 365 Account and selecting:
+
+`My Account` -> `Privacy` -> `App Access`.
 
 You should see OneDriveCLI in the list of apps. Select `Don't Allow` to revoke.
 
