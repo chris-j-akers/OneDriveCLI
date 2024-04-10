@@ -75,7 +75,9 @@ disable debug traces            : 'odc debug-off'
 ```
 odc init
 ```
-See Initialisation section, above, this will initialise OneDriveCLI for use with your personal OneDrive. The application will open your default browser at the Microsoft 365 Logon page where you will need to logon and permit OneDriveCLI access to your OneDrive.
+See Initialisation section, above. `odc init` will initialise OneDriveCLI for use with your personal OneDrive.
+
+The application will open your default browser at the Microsoft 365 Logon page where you will need to log in to your Microsoft account and permit access to your OneDrive.
 
 Initialisation creates a *sqlite3* database called `settings.db` in your `~/.config` directory. This database stores session state and refresh tokens required by Microsoft Graph to access OneDrive without needing to logon each time.
 
