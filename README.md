@@ -18,7 +18,7 @@ The application can be built and installed by cloning this repo (note the `--rec
 ```
 Note that the installation process will create a sub-directory called `OneDriveCLI` in your `~/.config` directory. This is where a SQLite database is stored. The database is used to persist state and settings, including Microsoft Graph Refresh tokens.
 
-Once the installation process has completed successfully the cloned can be deleted. A version installable from PyPi will shortly be available.
+Once the installation process has completed successfully the cloned repo can be deleted. A version installable from PyPi will shortly be available.
 
 ## Initialisation
 
@@ -28,8 +28,6 @@ Before first use, you must register the app with your Microsoft OneDrive account
 ➜ odc init
 ```
 This will open your default web-browser and present you with the Microsoft OneDrive logon page. You will need to logon and accept the access requirements for the application.
-
-After logging on you'll be presented with a request to accept the access requirements for the application.
 
 ![Example of Access Requirements Request](readme-assets/odc-access-request.png)
 
@@ -79,7 +77,7 @@ odc init
 ```
 See Initialisation section, above, this will initialise OneDriveCLI for use with your personal OneDrive. The application will open your default browser at the Microsoft 365 Logon page where you will need to logon and permit OneDriveCLI access to your OneDrive.
 
-Initialisation creates an *sqlite3* database called `settings.db` in your `~/.config` directory. This database stores session state and refresh tokens required by Microsoft Graph to access OneDrive without needing to logon each time.
+Initialisation creates a *sqlite3* database called `settings.db` in your `~/.config` directory. This database stores session state and refresh tokens required by Microsoft Graph to access OneDrive without needing to logon each time.
 
 ### Get Current Working Directory
 
