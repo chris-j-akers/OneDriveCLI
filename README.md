@@ -8,10 +8,6 @@ The application is written in Python.
 
 Currently, only desktop Linux versions are supported as the initialisation process requires a default browser which is used to enter Microsoft OneDrive account details.
 
-## Source
-
-The GitHub Repo link is here: https://github.com/chris-j-akers/OneDriveCLI
-
 ## Installation
 
 The application can be built and installed by cloning this repo (note the `--recurse` option), the running `make install`:
@@ -21,6 +17,8 @@ The application can be built and installed by cloning this repo (note the `--rec
 ➜ make install
 ```
 Note that the installation process will create a sub-directory called `OneDriveCLI` in your `~/.config` directory. This is where a SQLite database is stored. The database is used to persist state and settings, including Microsoft Graph Refresh tokens.
+
+Once the installation process has completed successfully the cloned can be deleted. A version installable from PyPi will shortly be available.
 
 ## Initialisation
 
