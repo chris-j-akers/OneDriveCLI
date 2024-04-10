@@ -1,8 +1,8 @@
-# OneDriveCLI
+# OneDriveCLI for Linux
 
 ## Introduction
 
-OneDriveCLI provides an simple command-line interface into consumer Microsoft OneDrives. It permits directory navigation, downloading and uploading files, creating directories and deleting items (moves them to the OneDrive recycle bin).
+OneDriveCLI for Linux provides a simple command-line interface into consumer Microsoft OneDrives. It permits directory navigation, downloading and uploading files, creating directories and deleting items (moves them to the OneDrive recycle bin).
 
 The application is written in Python.
 
