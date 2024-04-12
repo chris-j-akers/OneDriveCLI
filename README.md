@@ -33,9 +33,9 @@ Note the `--recurse` option in the `clone` command below.
 ➜ git clone --recurse git@github.com:chris-j-akers/OneDriveCLI.git
 ➜ make install
 ```
-Initialisation creates a sub-directory called `OneDriveCLI` in `~/.config` where it stores a *sqlite3* database called `settings.db`. This database contains session-state and refresh tokens required by Microsoft Graph.
-
 Once the installation process has completed successfully the cloned repo can be deleted. A version installable from PyPi will shortly be available.
+
+Installation creates a sub-directory called `OneDriveCLI` in `~/.config` where the application stores a *sqlite3* database called `settings.db`. This database contains session-state and refresh tokens required by Microsoft Graph. If you delete this database you will need to run the initialisation process again.
 
 ## Initialisation
 
@@ -47,6 +47,8 @@ Before first use, you must register the app with your Microsoft OneDrive account
 This will open your default web-browser and present you with the Microsoft OneDrive logon page. You will need to logon and accept the access requirements for the application.
 
 ![Example of Access Requirements Request](readme-assets/odc-access-request.png)
+
+Initialisation creates a sub-directory called `OneDriveCLI` in `~/.config` where it stores a *sqlite3* database called `settings.db`. This database contains session-state and refresh tokens required by Microsoft Graph.
 
 ### Revoking App Access
 
@@ -95,8 +97,6 @@ See Initialisation section, above. `odc init` will initialise OneDriveCLI for us
 
 The application will open your default browser at the Microsoft 365 Logon page where you will need to log in to your Microsoft account and permit access to OneDrive.
 
-Initialisation creates a sub-directory called `OneDriveCLI` in `~/.config` where it stores a *sqlite3* database called `settings.db`. This database contains session-state and refresh tokens required by Microsoft Graph.
-
 ### Get Current Working Directory
 
 `odc pwd`
@@ -121,9 +121,23 @@ Using `cd` with no `<new_dir>` parameter changes the directory to `root`.
 ```
 ➜ odc cd ./tech-books
 /drives/539fb3f9a5fe3189/root:/tech-books
+```
+```
+➜ odc cd /tech-books/reverse-engineering-for-beginners
+/drives/539fb3f9a5fe3189/root:/tech-books/reverse-engineering-for-beginners
+```
+```
 ➜ odc cd
 /drives/539fb3f9a5fe3189/root:/
 ```
+```
+➜ odc cd /tech-books/reverse-engineering-for-beginners
+/drives/539fb3f9a5fe3189/root:/tech-books/reverse-engineering-for-beginners
+
+➜ odc cd ..
+/drives/539fb3f9a5fe3189/root:/tech-books
+```
+
 ### List Items in Current Working Directory
 
 `ls`
@@ -164,10 +178,13 @@ Make a new directory.
 ```
 ➜ odc mkdir ./test-dir
 created: /tech-books/test-dir
+
 ➜ odc cd test-dir
 /drives/539fb3f9a5fe3189/root:/tech-books/test-dir
+
 ➜ odc mkdir ../test-dir-2
 created: /tech-books/test-dir-2
+
 ➜ odc cd ../test-dir-2
 /drives/539fb3f9a5fe3189/root:/tech-books/test-dir-2
 ```
@@ -194,6 +211,7 @@ Download a file to your local host. If no local path is specified, will download
 ➜ odc get ./tech-books/reverse-engineering-for-beginners/october-2023/RE4B-EN-October-2023.pdf
 Downloading [RE4B-EN-October-2023.pdf] to [./]
 ..Done
+
 ➜ ls -l RE4*
 -rw-rw-r-- 1 cakers cakers 12340127 Apr 10 21:18 RE4B-EN-October-2023.pdf
 ```
@@ -208,8 +226,10 @@ Upload a file from your local host. If no remote path is specified, will upload 
 ➜ odc put ./RE4B-EN-October-2023.pdf ./books
 Uploading [./RE4B-EN-October-2023.pdf] (12340127 bytes)
 ..Done
+
 ➜ odc cd books
 /drives/539fb3f9a5fe3189/root:/books
+
 ➜ odc ls
 f  https://1drv.ms/b/s!AIkx_qX5s59TiLcv  Chris Akers  2024-04-10 20:21:02  Chris Akers  2024-04-10 20:21:02  12340127  RE4B-EN-October-2023.pdf  
 ```
@@ -223,6 +243,7 @@ Enables DEBUG trace statements.
 ```
 ➜ odc debug-on
 DEBUG:OneDriveCLI.OneDriveCLI.OneDriveCLI:updating value "debug_on" to "true" in settings db
+
 ➜ odc ls
 DEBUG:OneDriveCLI.OneDriveCLI.OneDriveCLI:updating value "debug_on" to "true" in settings db
 DEBUG:OneDriveCLI.OneDriveCLI.OneDriveCLI:drive id set to "539fb3f9a5fe3189" (if this is "None" then DB is new and Initialise() needs to be run)
