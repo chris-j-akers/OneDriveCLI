@@ -97,7 +97,7 @@ class OneDriveCLI:
         url = f'{self._root[:-1]}' if remote_path == '/' else f'{self._root}{remote_path}'
         response = self._onedrive_api_get(url)
         if 'error' in (json := response.json()):
-            self._logger.debug(f'error returned from API (this is fine if problem is item doesn\'t exist): {json['error']['code']} | {json['error']['message']}')
+            self._logger.debug(f'error returned from API (this is fine if problem is item doesn\'t exist): {json["error"]["code"]} | {json["error"]["message"]}')
             return ''
         return json['id']
 
